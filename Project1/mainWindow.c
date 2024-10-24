@@ -11,6 +11,9 @@
 #define MAX_WINDOW_SIZE_X 830
 #define MAX_WINDOW_SIZE_Y 600
 
+#define MIN_NUMUPDOWN_VALUE 0
+#define MAX_NUMUPDOWN_VALUE 100
+
 #define ID_BTN_ADD 101
 #define ID_BTN_HIDE_ADD 102
 #define ID_BTN_LANG 103
@@ -252,7 +255,7 @@ HWND CreateUpDown(HWND hwnd, struct component tmr) {
     }
 
     SendMessage(hwndSpin, UDM_SETBUDDY, (WPARAM)cmpInfo[GetIndexOfComponent(indexOfEdit)].cmp, 0);
-    SendMessage(hwndSpin, UDM_SETRANGE32, 0, 100);
+    SendMessage(hwndSpin, UDM_SETRANGE32, MIN_NUMUPDOWN_VALUE, MAX_NUMUPDOWN_VALUE);
     SendMessage(hwndSpin, UDM_SETPOS32, 0, 0);
     return hwndSpin;
 }
@@ -301,6 +304,13 @@ void HideComponentsToAdd() {
     }
 }
 
+void ResetComponentsCaptionsToAdd(){
+    SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, "");
+    SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, "");
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_UPDOWN_HOUR)].cmp, UDM_SETPOS32, 0, 0);
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_UPDOWN_MINUTE)].cmp, UDM_SETPOS32, 0, 0);
+}
+
 void OnClickButtonLang(HWND hwnd) {
     char buttonText[100];
     GetWindowText(cmpInfo[GetIndexOfComponent(ID_BTN_LANG)].cmp, buttonText, sizeof(buttonText));
@@ -335,86 +345,35 @@ void OnClickButtonCreate(HWND hwnd) {
     int lenM = GetWindowTextLength(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE)].cmp);
 
     if (lenS <= 0 || lenD <= 0 || lenH <= 0 || lenM <= 0) {
-        LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_NOT_FILLED));
-        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        ErrorFieldsNotFilled(hwnd);
         return;
     }
     else {
         LPTSTR fSource = (LPTSTR)malloc((lenS + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, fSource, lenS + 1);
-        DWORD attributes = GetFileAttributes(fSource);
-        if (attributes == INVALID_FILE_ATTRIBUTES) {
-            LPTSTR data = ConcatenateStrings("\"", fSource);
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_FILE_NOT_EXIST));
-            MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        if (ErrorIncorrectFilePath(hwnd, fSource))
             return;
-        }
-        else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
-            LPTSTR data = ConcatenateStrings("\"", fSource);
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_NOT_FILE));
-            MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
-            return;
-        }
 
         LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, dDest, lenS + 1);
-        attributes = GetFileAttributes(dDest);
-        if (attributes == INVALID_FILE_ATTRIBUTES) {
-            LPTSTR data = ConcatenateStrings("\"", dDest);
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_FILE_NOT_EXIST));
-            MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        if (ErrorIncorrectDirPath(hwnd, dDest))
             return;
-        }
-        else if (!(attributes & FILE_ATTRIBUTE_DIRECTORY)) {
-            LPTSTR data = ConcatenateStrings("\"", dDest);
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_NOT_DIR));
-            MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
-            return;
-        }
 
         LPTSTR hour = (LPTSTR)malloc((lenH + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR)].cmp, hour, lenH + 1);
-        int h = _tstoi(hour);
+        int h = GetEnteredNumber(hour);
 
         LPTSTR minutes = (LPTSTR)malloc((lenM + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE)].cmp, minutes, lenM + 1);
-        int m = _tstoi(minutes);
+        int m = GetEnteredNumber(minutes);
 
-        if (h * 60 + m == 0) {
-            LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_ICORRECT_FREQUENCY));
-            MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        int minFreq = h * 60 + m;
+        if (ErrorIncorrectFrequency(hwnd, minFreq))
             return;
-        }
-        else {
-            m = m + h * 60;
-            LPTSTR data = ConcatenateStrings(GetStringFromResource(TEXT_FILE), " ");
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, fSource);
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, " ");
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_TO));
-            data = ConcatenateStrings(data, " ");
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, dDest);
-            data = ConcatenateStrings(data, "\"");
-            data = ConcatenateStrings(data, " ");
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_FREQ));
-            data = ConcatenateStrings(data, " ");
 
-            LPTSTR str = (LPTSTR)malloc((5) * sizeof(TCHAR));
-            swprintf(str, sizeof(str) / sizeof(wchar_t), L"%d", m / 60);
-            data = ConcatenateStrings(data, str);
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_HOUR));
-            data = ConcatenateStrings(data, " ");
-            swprintf(str, sizeof(str) / sizeof(wchar_t), L"%d", m % 60);
-            data = ConcatenateStrings(data, str);
-            data = ConcatenateStrings(data, GetStringFromResource(TEXT_MINUTE));
-            MessageBox(hwnd, data, GetStringFromResource(TEXT_INFO), MB_OK);
-        }
+        InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
+        ResetComponentsCaptionsToAdd();
+        HideComponentsToAdd();
     }
 }
 
@@ -478,4 +437,86 @@ LPTSTR ConcatenateStrings(LPTSTR lpszStr1, LPTSTR lpszStr2)
     lstrcat(lpszResult, lpszStr2);
 
     return lpszResult;
+}
+
+void ErrorFieldsNotFilled(HWND hwnd) {
+    LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_NOT_FILLED));
+    MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+}
+
+int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource) {
+    DWORD attributes = GetFileAttributes(fSource);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        LPTSTR data = ConcatenateStrings("\"", fSource);
+        data = ConcatenateStrings(data, "\"");
+        data = ConcatenateStrings(data, GetStringFromResource(TEXT_FILE_NOT_EXIST));
+        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+        LPTSTR data = ConcatenateStrings("\"", fSource);
+        data = ConcatenateStrings(data, "\"");
+        data = ConcatenateStrings(data, GetStringFromResource(TEXT_NOT_FILE));
+        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
+}
+
+int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest) {
+    DWORD attributes = GetFileAttributes(dDest);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        LPTSTR data = ConcatenateStrings("\"", dDest);
+        data = ConcatenateStrings(data, "\"");
+        data = ConcatenateStrings(data, GetStringFromResource(TEXT_FILE_NOT_EXIST));
+        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    else if (!(attributes & FILE_ATTRIBUTE_DIRECTORY)) {
+        LPTSTR data = ConcatenateStrings("\"", dDest);
+        data = ConcatenateStrings(data, "\"");
+        data = ConcatenateStrings(data, GetStringFromResource(TEXT_NOT_DIR));
+        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
+}
+
+int ErrorIncorrectFrequency(HWND hwnd, int freq) {
+    if (freq == 0) {
+        LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_ICORRECT_FREQUENCY));
+        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    return 0;
+}
+
+void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq) {
+    LPTSTR data = ConcatenateStrings(GetStringFromResource(TEXT_FILE), " ");
+    data = ConcatenateStrings(data, "\"");
+    data = ConcatenateStrings(data, fSource);
+    data = ConcatenateStrings(data, "\"");
+    data = ConcatenateStrings(data, " ");
+    data = ConcatenateStrings(data, GetStringFromResource(TEXT_TO));
+    data = ConcatenateStrings(data, " ");
+    data = ConcatenateStrings(data, "\"");
+    data = ConcatenateStrings(data, dDest);
+    data = ConcatenateStrings(data, "\"");
+    data = ConcatenateStrings(data, " ");
+    data = ConcatenateStrings(data, GetStringFromResource(TEXT_FREQ));
+    data = ConcatenateStrings(data, " ");
+
+    LPTSTR str = (LPTSTR)malloc((5) * sizeof(TCHAR));
+    swprintf(str, sizeof(str) / sizeof(wchar_t), L"%d", minFreq / 60);
+    data = ConcatenateStrings(data, str);
+    data = ConcatenateStrings(data, GetStringFromResource(TEXT_HOUR));
+    data = ConcatenateStrings(data, " ");
+    swprintf(str, sizeof(str) / sizeof(wchar_t), L"%d", minFreq % 60);
+    data = ConcatenateStrings(data, str);
+    data = ConcatenateStrings(data, GetStringFromResource(TEXT_MINUTE));
+    MessageBox(hwnd, data, GetStringFromResource(TEXT_INFO), MB_OK);
+}
+
+int GetEnteredNumber(LPTSTR number) {
+    return _tstoi(number) % (MAX_NUMUPDOWN_VALUE + 1);
 }

@@ -20,6 +20,7 @@ void SetApplicationLanguage(BOOL isEnglish);
 
 void OnClickButtonAdd();
 void HideComponentsToAdd();
+void ResetComponentsCaptionsToAdd();
 void OnClickButtonLang(HWND hwnd);
 void OnClickSelectFile(HWND hwnd);
 void OnClickSelectDir(HWND hwnd);
@@ -29,3 +30,10 @@ int GetIndexOfComponent(int id);
 char* OpenFileDialog(HWND hwnd);
 char* SelectFolder(HWND hwnd);
 LPTSTR ConcatenateStrings(LPTSTR lpszStr1, LPTSTR lpszStr2);
+int GetEnteredNumber(LPTSTR number);
+
+void ErrorFieldsNotFilled(HWND hwnd);
+int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource);
+int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest);
+int ErrorIncorrectFrequency(HWND hwnd, int freq);
+void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq);
