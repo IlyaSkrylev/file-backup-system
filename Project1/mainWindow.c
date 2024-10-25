@@ -51,6 +51,12 @@ struct component {
     int initShow;
 };
 
+struct dataAboutFile {
+    LPTSTR fSource[MAX_PATH];
+    LPTSTR dDest[MAX_PATH];
+    DWORD frequency;
+};
+
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW},
     {NULL, "label", LABEL_SOURCE, ID_LBL_SOURCE, 120, 10, 150, 20, SW_HIDE},
@@ -372,6 +378,13 @@ void OnClickButtonCreate(HWND hwnd) {
             return;
 
         InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
+
+        struct dataAboutFile data = { fSource, dDest, minFreq };
+        if (!WriteDataIntoFile(&data)) {
+            ErrorWrong(hwnd);
+            return;
+        }
+
         ResetComponentsCaptionsToAdd();
         HideComponentsToAdd();
     }
@@ -402,11 +415,15 @@ char* OpenFileDialog(HWND hwnd) {
     ofn.lpstrInitialDir = NULL;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
+    char currentDir[MAX_PATH];
+    GetCurrentDirectoryA(MAX_PATH, currentDir);
     if (GetOpenFileName(&ofn))
     {
+        SetCurrentDirectoryA(currentDir);
         return fileName;
     }
 
+    SetCurrentDirectoryA(currentDir);
     free(fileName);
     return NULL;
 }
@@ -414,7 +431,7 @@ char* OpenFileDialog(HWND hwnd) {
 char* SelectFolder(HWND hwnd) {
     BROWSEINFO bi = { 0 };
     bi.hwndOwner = hwnd;
-    bi.lpszTitle = "Select a folder";
+    bi.lpszTitle = ConcatenateStrings("", GetStringFromResource(TEXT_BI_TITLE));
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 
     LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
@@ -491,18 +508,19 @@ int ErrorIncorrectFrequency(HWND hwnd, int freq) {
     return 0;
 }
 
+void ErrorWrong(HWND hwnd) {
+    LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_WRONG));
+    MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+}
+
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq) {
-    LPTSTR data = ConcatenateStrings(GetStringFromResource(TEXT_FILE), " ");
-    data = ConcatenateStrings(data, "\"");
+    LPTSTR data = ConcatenateStrings(GetStringFromResource(TEXT_FILE), _T(" \""));
     data = ConcatenateStrings(data, fSource);
-    data = ConcatenateStrings(data, "\"");
-    data = ConcatenateStrings(data, " ");
+    data = ConcatenateStrings(data, _T("\" "));
     data = ConcatenateStrings(data, GetStringFromResource(TEXT_TO));
-    data = ConcatenateStrings(data, " ");
-    data = ConcatenateStrings(data, "\"");
+    data = ConcatenateStrings(data, _T(" \""));
     data = ConcatenateStrings(data, dDest);
-    data = ConcatenateStrings(data, "\"");
-    data = ConcatenateStrings(data, " ");
+    data = ConcatenateStrings(data, _T("\" "));
     data = ConcatenateStrings(data, GetStringFromResource(TEXT_FREQ));
     data = ConcatenateStrings(data, " ");
 
@@ -519,4 +537,19 @@ void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int min
 
 int GetEnteredNumber(LPTSTR number) {
     return _tstoi(number) % (MAX_NUMUPDOWN_VALUE + 1);
+}
+
+int WriteDataIntoFile(const struct dataAboutFile* data) {
+    HANDLE hFile = CreateFile(_T("datafile.bin"), GENERIC_WRITE,            
+        0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);                       
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return 0;
+
+    DWORD bytesWritten;
+    if (!WriteFile(hFile, data, sizeof(struct dataAboutFile), &bytesWritten, NULL))
+        return 0;
+
+    CloseHandle(hFile);
+    return 1;
 }

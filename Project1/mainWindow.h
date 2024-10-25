@@ -31,9 +31,11 @@ char* OpenFileDialog(HWND hwnd);
 char* SelectFolder(HWND hwnd);
 LPTSTR ConcatenateStrings(LPTSTR lpszStr1, LPTSTR lpszStr2);
 int GetEnteredNumber(LPTSTR number);
+int WriteDataIntoFile(const struct dataAboutFile* data);
 
 void ErrorFieldsNotFilled(HWND hwnd);
 int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource);
 int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest);
 int ErrorIncorrectFrequency(HWND hwnd, int freq);
+void ErrorWrong(HWND hwnd);
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq);

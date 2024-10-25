@@ -28,6 +28,8 @@
 #define TEXT_HOUR 3011
 #define TEXT_MINUTE 3012
 #define TEXT_INFO 3013
+#define TEXT_WRONG 3014
+#define TEXT_BI_TITLE 3015
 
 // Next default values for new objects
 // 
