@@ -8,6 +8,8 @@
 #define BUTTON_SELECT_FILE 104
 #define BUTTON_SELECT_DIR 105
 #define BUTTON_CREATE 106
+#define BUTTON_ALL_FILES 107
+#define BUTTON_HIDE_ALL_FILES 108
 
 #define LABEL_SOURCE 201
 #define LABEL_DEST 202
@@ -30,6 +32,7 @@
 #define TEXT_INFO 3013
 #define TEXT_WRONG 3014
 #define TEXT_BI_TITLE 3015
+#define TEXT_LIMIT_FILES 3016
 
 // Next default values for new objects
 // 

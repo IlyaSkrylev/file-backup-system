@@ -18,8 +18,8 @@ HWND CreateUpDown(HWND hwnd, struct component tmr);
 LPTSTR GetStringFromResource(UINT id);
 void SetApplicationLanguage(BOOL isEnglish);
 
-void OnClickButtonAdd();
-void HideComponentsToAdd();
+void OnClickButtonMainMenu(int idBtnMainMenu, int idHideButton);
+void HideComponentsMainMenu(int idBtnMainMenu, int idHideButton);
 void ResetComponentsCaptionsToAdd();
 void OnClickButtonLang(HWND hwnd);
 void OnClickSelectFile(HWND hwnd);
@@ -29,13 +29,13 @@ void OnClickButtonCreate(HWND hwnd);
 int GetIndexOfComponent(int id);
 char* OpenFileDialog(HWND hwnd);
 char* SelectFolder(HWND hwnd);
-LPTSTR ConcatenateStrings(LPTSTR lpszStr1, LPTSTR lpszStr2);
+LPTSTR ConcatenateStrings(LPTSTR strings[], int len);
 int GetEnteredNumber(LPTSTR number);
-int WriteDataIntoFile(const struct dataAboutFile* data);
+int WriteDataIntoBinFile(const struct dataAboutFile* data);
+int RecordCountInBinFile();
 
-void ErrorFieldsNotFilled(HWND hwnd);
+void ErrorTextOnly(HWND hwnd, DWORD textInd);
 int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource);
 int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest);
 int ErrorIncorrectFrequency(HWND hwnd, int freq);
-void ErrorWrong(HWND hwnd);
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq);

@@ -14,12 +14,16 @@
 #define MIN_NUMUPDOWN_VALUE 0
 #define MAX_NUMUPDOWN_VALUE 100
 
+#define MAX_RECORDS 100
+
 #define ID_BTN_ADD 101
 #define ID_BTN_HIDE_ADD 102
 #define ID_BTN_LANG 103
 #define ID_BTN_SELECT_FILE 104
 #define ID_BTN_SELECT_DIR 105
 #define ID_BTN_CREATE 106
+#define ID_BTN_ALL_FILES 107
+#define ID_BTN_HIDE_ALL_FILES 108
 
 #define ID_EDIT_SOURCE 201
 #define ID_EDIT_DEST 202
@@ -49,6 +53,7 @@ struct component {
     int x, y;
     int width, height;
     int initShow;
+    BOOL isAlwaysVisible;
 };
 
 struct dataAboutFile {
@@ -58,24 +63,27 @@ struct dataAboutFile {
 };
 
 struct component cmpInfo[] = {
-    {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW},
-    {NULL, "label", LABEL_SOURCE, ID_LBL_SOURCE, 120, 10, 150, 20, SW_HIDE},
-    {NULL, "label", LABEL_DEST, ID_LBL_DEST, 120, 40, 150, 20, SW_HIDE},
-    {NULL, "label", LABEL_FREQUENCY, ID_LBL_FREQUENCY, 120, 70, 150, 20, SW_HIDE},
-    {NULL, "label", LABEL_HOUR, ID_LBL_HOUR, 280, 70, 10, 20, SW_HIDE},
-    {NULL, "label", LABEL_MINUTE, ID_LBL_MINUTE, 360, 70, 25, 20, SW_HIDE},
-    {NULL, "edit", 0, ID_EDIT_SOURCE, 280, 10, EDIT_WIDTH, EDIT_HEIGHT, SW_HIDE},
-    {NULL, "edit", 0, ID_EDIT_DEST, 280, 40, EDIT_WIDTH, EDIT_HEIGHT, SW_HIDE},
-    {NULL, "nedit", 0, ID_EDIT_HOUR, 290, 70, 50, 20, SW_HIDE},
-    {NULL, "updown", 0, ID_UPDOWN_HOUR, 0, 0, 0, 0, SW_HIDE},
-    {NULL, "nedit", 0, ID_EDIT_MINUTE, 390, 70, 50, 20, SW_HIDE},
-    {NULL, "updown", 0, ID_UPDOWN_MINUTE, 0, 0, 0, 0, SW_HIDE},
-    {NULL, "button", BUTTON_SELECT_FILE, ID_BTN_SELECT_FILE, 690, 8, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE},
-    {NULL, "button", BUTTON_SELECT_DIR, ID_BTN_SELECT_DIR, 690, 38, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE},
-    {NULL, "button", BUTTON_CREATE, ID_BTN_CREATE, 690, 70, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE},
-    {NULL, "button", BUTTON_HIDE_ADD, ID_BTN_HIDE_ADD, 120, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE},
+    {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
+    {NULL, "label", LABEL_SOURCE, ID_LBL_SOURCE, 120, 10, 150, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_DEST, ID_LBL_DEST, 120, 40, 150, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_FREQUENCY, ID_LBL_FREQUENCY, 120, 70, 150, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_HOUR, ID_LBL_HOUR, 280, 70, 10, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_MINUTE, ID_LBL_MINUTE, 360, 70, 25, 20, SW_HIDE, FALSE},
+    {NULL, "edit", 0, ID_EDIT_SOURCE, 280, 10, EDIT_WIDTH, EDIT_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "edit", 0, ID_EDIT_DEST, 280, 40, EDIT_WIDTH, EDIT_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "nedit", 0, ID_EDIT_HOUR, 290, 70, 50, 20, SW_HIDE, FALSE},
+    {NULL, "updown", 0, ID_UPDOWN_HOUR, 0, 0, 0, 0, SW_HIDE, FALSE},
+    {NULL, "nedit", 0, ID_EDIT_MINUTE, 390, 70, 50, 20, SW_HIDE, FALSE},
+    {NULL, "updown", 0, ID_UPDOWN_MINUTE, 0, 0, 0, 0, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_SELECT_FILE, ID_BTN_SELECT_FILE, 690, 8, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_SELECT_DIR, ID_BTN_SELECT_DIR, 690, 38, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_CREATE, ID_BTN_CREATE, 690, 70, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_HIDE_ADD, ID_BTN_HIDE_ADD, 120, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
 
-    {NULL, "button", BUTTON_LANG, ID_BTN_LANG, 0, 0, 40, BUTTON_HEIGHT, SW_SHOW},
+    {NULL, "button", BUTTON_ALL_FILES, ID_BTN_ALL_FILES, 10, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
+    {NULL, "button", BUTTON_HIDE_ALL_FILES, ID_BTN_HIDE_ALL_FILES, 10, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+
+    {NULL, "button", BUTTON_LANG, ID_BTN_LANG, 0, 0, 40, BUTTON_HEIGHT, SW_SHOW, TRUE},
 
     {NULL, NULL, NULL, NULL, NULL, NULL}
 };
@@ -192,16 +200,17 @@ LRESULT ChangeStaticBk(WPARAM wParam) {
     return (LRESULT)CreateSolidBrush(backgroundColor);
 }
 
-// Get a string in the selected language
 LPTSTR GetStringFromResource(UINT id) {
-    HINSTANCE hInstance = GetModuleHandle(NULL); 
-    static TCHAR buffer[256];
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+    int len = 256;
+    LPTSTR buffer = (LPTSTR)malloc(len * sizeof(TCHAR));
 
-    if (LoadString(hInstance, id, buffer, sizeof(buffer) / sizeof(TCHAR))) {
-        return buffer; 
+    if (LoadString(hInstance, id, buffer, len)) {
+        return buffer;
     }
     else {
-        return TEXT("Œ¯Ë·Í‡"); 
+        free(buffer);
+        return NULL;
     }
 }
 
@@ -216,10 +225,13 @@ void SetApplicationLanguage(BOOL isEnglish) {
 }
 
 HWND CreateButton(HWND hwnd, struct component btn) {
-    return CreateWindow(TEXT("BUTTON"), GetStringFromResource(btn.name),
+    LPTSTR btnName = GetStringFromResource(btn.name);
+    HWND button =  CreateWindow(TEXT("BUTTON"), btnName,
             WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
             btn.x, btn.y, btn.width, btn.height,
             hwnd, (HMENU)btn.id, NULL, NULL);
+    free(btnName);
+    return button;
 }
 
 HWND CreateEdit(HWND hwnd, struct component edit) {
@@ -237,10 +249,13 @@ HWND CreateNumericEdit(HWND hwnd, struct component nedit) {
 }
 
 HWND CreateLabel(HWND hwnd, struct component lbl) {
-    return CreateWindow(TEXT("static"), GetStringFromResource(lbl.name),
+    LPTSTR lName = GetStringFromResource(lbl.name);
+    HWND label = CreateWindow(TEXT("static"), lName,
         WS_CHILD | WS_VISIBLE,
         lbl.x, lbl.y, lbl.width, lbl.height,
         hwnd, (HMENU)lbl.id, NULL, NULL);
+    free(lName);
+    return label;
 }
 
 HWND CreateUpDown(HWND hwnd, struct component tmr) {
@@ -270,11 +285,11 @@ HWND CreateUpDown(HWND hwnd, struct component tmr) {
 void CommandsOfComponents(HWND hwnd, WPARAM wParam) {
     switch (LOWORD(wParam)) {
     case ID_BTN_ADD: {
-        OnClickButtonAdd();
+        OnClickButtonMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
         break;
     }
     case ID_BTN_HIDE_ADD: {
-        HideComponentsToAdd();
+        HideComponentsMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
         break;
     }
     case ID_BTN_LANG: {
@@ -293,22 +308,43 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam) {
         OnClickButtonCreate(hwnd);
         break;
     }
+    case ID_BTN_ALL_FILES: {
+        OnClickButtonMainMenu(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
+        //ShowFilesFromBinFile(hwnd);
+        break;
+    }
+    case ID_BTN_HIDE_ALL_FILES: {
+        HideComponentsMainMenu(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
+        break;
+    }
     }
 }
 
-void OnClickButtonAdd() {
-    for (int i = 1; i <= GetIndexOfComponent(ID_BTN_HIDE_ADD); i++) {
+void OnClickButtonMainMenu(int idBtnMainMenu, int idHideButton) {
+    int indexBtnMainMenu = GetIndexOfComponent(idBtnMainMenu);
+    int indexHideButton = GetIndexOfComponent(idHideButton);
+
+    for (int i = 0; cmpInfo[i].id != NULL; i++) {
+        if (!cmpInfo[i].isAlwaysVisible && (i < indexBtnMainMenu || i > indexHideButton)) {
+            ShowWindow(cmpInfo[i].cmp, SW_HIDE);
+            cmpInfo[i].initShow = SW_HIDE;
+        }
+    }
+
+    for (int i = indexBtnMainMenu + 1; i <= indexHideButton; i++) {
         ShowWindow(cmpInfo[i].cmp, SW_SHOW);
         cmpInfo[i].initShow = SW_SHOW;
     }
 }
 
-void HideComponentsToAdd() {
-    for (int i = 1; i <= GetIndexOfComponent(ID_BTN_HIDE_ADD); i++) {
+void HideComponentsMainMenu(int idBtnMainMenu, int idHideButton) {
+    int indexHideButton = GetIndexOfComponent(idHideButton);
+    for (int i = GetIndexOfComponent(idBtnMainMenu) + 1; i <= indexHideButton; i++) {
         ShowWindow(cmpInfo[i].cmp, SW_HIDE);
         cmpInfo[i].initShow = SW_HIDE;
     }
 }
+
 
 void ResetComponentsCaptionsToAdd(){
     SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, "");
@@ -327,7 +363,9 @@ void OnClickButtonLang(HWND hwnd) {
     
     for (int i = 0; cmpInfo[i].id != NULL; i++) {
         if (cmpInfo[i].name != 0) {
-            SetWindowText(cmpInfo[i].cmp, GetStringFromResource(cmpInfo[i].name));
+            LPTSTR text = GetStringFromResource(cmpInfo[i].name);
+            SetWindowText(cmpInfo[i].cmp, text);
+            free(text);
         }
     }
 }
@@ -336,12 +374,14 @@ void OnClickSelectFile(HWND hwnd) {
     char* filePath = OpenFileDialog(hwnd);
     if (filePath != NULL && filePath[0] != '\0')
         SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, filePath);
+    free(filePath);
 }
 
 void OnClickSelectDir(HWND hwnd) {
     char* filePath = SelectFolder(hwnd);
     if (filePath != NULL && filePath[0] != '\0')
         SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, filePath);
+    free(filePath);
 }
 
 void OnClickButtonCreate(HWND hwnd) {
@@ -351,19 +391,23 @@ void OnClickButtonCreate(HWND hwnd) {
     int lenM = GetWindowTextLength(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE)].cmp);
 
     if (lenS <= 0 || lenD <= 0 || lenH <= 0 || lenM <= 0) {
-        ErrorFieldsNotFilled(hwnd);
+        ErrorTextOnly(hwnd, TEXT_NOT_FILLED);
         return;
     }
     else {
         LPTSTR fSource = (LPTSTR)malloc((lenS + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, fSource, lenS + 1);
-        if (ErrorIncorrectFilePath(hwnd, fSource))
+        if (ErrorIncorrectFilePath(hwnd, fSource)) {
+            free(fSource);
             return;
+        }
 
         LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, dDest, lenS + 1);
-        if (ErrorIncorrectDirPath(hwnd, dDest))
+        if (ErrorIncorrectDirPath(hwnd, dDest)) {
+            free(fSource); free(dDest);
             return;
+        }
 
         LPTSTR hour = (LPTSTR)malloc((lenH + 1) * sizeof(TCHAR));
         GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR)].cmp, hour, lenH + 1);
@@ -374,19 +418,28 @@ void OnClickButtonCreate(HWND hwnd) {
         int m = GetEnteredNumber(minutes);
 
         int minFreq = h * 60 + m;
-        if (ErrorIncorrectFrequency(hwnd, minFreq))
-            return;
-
-        InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
-
-        struct dataAboutFile data = { fSource, dDest, minFreq };
-        if (!WriteDataIntoFile(&data)) {
-            ErrorWrong(hwnd);
+        if (ErrorIncorrectFrequency(hwnd, minFreq)) {
+            free(fSource); free(dDest); free(hour); free(minutes);
             return;
         }
 
+        struct dataAboutFile data = { fSource, dDest, minFreq };
+        int res = WriteDataIntoBinFile(&data);
+        if (res == -1) {
+            free(fSource); free(dDest); free(hour); free(minutes);
+            ErrorTextOnly(hwnd, TEXT_WRONG);
+            return;
+        }
+        else if (res == 1) {
+            free(fSource); free(dDest); free(hour); free(minutes);
+            ErrorTextOnly(hwnd, TEXT_LIMIT_FILES);
+            return;
+        }
+
+        InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
         ResetComponentsCaptionsToAdd();
-        HideComponentsToAdd();
+        HideComponentsMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
+        free(fSource); free(dDest); free(hour); free(minutes);
     }
 }
 
@@ -431,7 +484,8 @@ char* OpenFileDialog(HWND hwnd) {
 char* SelectFolder(HWND hwnd) {
     BROWSEINFO bi = { 0 };
     bi.hwndOwner = hwnd;
-    bi.lpszTitle = ConcatenateStrings("", GetStringFromResource(TEXT_BI_TITLE));
+    LPTSTR title = GetStringFromResource(TEXT_BI_TITLE);
+    bi.lpszTitle = title;
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 
     LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
@@ -439,42 +493,62 @@ char* SelectFolder(HWND hwnd) {
         char* path = malloc(MAX_PATH);
         SHGetPathFromIDList(pidl, path);
         CoTaskMemFree(pidl);
+        free(title);
         return path;
     }
+    free(title);
     return NULL;
 }
 
-LPTSTR ConcatenateStrings(LPTSTR lpszStr1, LPTSTR lpszStr2)
-{
-    LPTSTR lpszResult = (LPTSTR)malloc((lstrlen(lpszStr1) + lstrlen(lpszStr2) + 1) * sizeof(TCHAR));
-    if (lpszResult == NULL)
-        return NULL;
+LPTSTR ConcatenateStrings(LPTSTR strings[], int len) {
+    int totalLen = 0;
+    for (int i = 0; i < len; i++) {
+        totalLen += lstrlen(strings[i]);
+    }
 
-    lstrcpy(lpszResult, lpszStr1);
-    lstrcat(lpszResult, lpszStr2);
+    LPTSTR lpszResult = (LPTSTR)malloc((totalLen + 1) * sizeof(TCHAR));
+    lstrcpy(lpszResult, strings[0]);
+
+    for (int i = 1; i < len; i++) {
+        lstrcat(lpszResult, strings[i]);
+    }
 
     return lpszResult;
 }
 
-void ErrorFieldsNotFilled(HWND hwnd) {
-    LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_NOT_FILLED));
-    MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+void ErrorTextOnly(HWND hwnd, DWORD textInd) {
+    LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+    LPTSTR errorMessage = GetStringFromResource(textInd);
+    MessageBox(hwnd, errorMessage, errorTitle, MB_OK | MB_ICONERROR);
+
+    free(errorTitle);
+    free(errorMessage);
 }
 
 int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource) {
     DWORD attributes = GetFileAttributes(fSource);
     if (attributes == INVALID_FILE_ATTRIBUTES) {
-        LPTSTR data = ConcatenateStrings("\"", fSource);
-        data = ConcatenateStrings(data, "\"");
-        data = ConcatenateStrings(data, GetStringFromResource(TEXT_FILE_NOT_EXIST));
-        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+        LPTSTR errorMessage = GetStringFromResource(TEXT_FILE_NOT_EXIST);
+        LPTSTR lArr[] = { "\"", fSource, "\"", errorMessage };
+        LPTSTR data = ConcatenateStrings(lArr, 4);
+        MessageBox(hwnd, data, errorTitle, MB_OK | MB_ICONERROR);
+
+        free(errorTitle);
+        free(errorMessage);
+        free(data);
         return 1;
     }
     else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
-        LPTSTR data = ConcatenateStrings("\"", fSource);
-        data = ConcatenateStrings(data, "\"");
-        data = ConcatenateStrings(data, GetStringFromResource(TEXT_NOT_FILE));
-        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+        LPTSTR errorMessage = GetStringFromResource(TEXT_NOT_FILE);
+        LPTSTR lArr[] = { "\"", fSource, "\"", errorMessage };
+        LPTSTR data = ConcatenateStrings(lArr, 4);
+        MessageBox(hwnd, data, errorTitle, MB_OK | MB_ICONERROR);
+
+        free(errorTitle);
+        free(errorMessage);
+        free(data);
         return 1;
     }
     return 0;
@@ -483,17 +557,27 @@ int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource) {
 int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest) {
     DWORD attributes = GetFileAttributes(dDest);
     if (attributes == INVALID_FILE_ATTRIBUTES) {
-        LPTSTR data = ConcatenateStrings("\"", dDest);
-        data = ConcatenateStrings(data, "\"");
-        data = ConcatenateStrings(data, GetStringFromResource(TEXT_FILE_NOT_EXIST));
-        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+        LPTSTR errorMessage = GetStringFromResource(TEXT_FILE_NOT_EXIST);
+        LPTSTR lArr[] = { "\"", dDest, "\"", errorMessage };
+        LPTSTR data = ConcatenateStrings(lArr, 4);
+        MessageBox(hwnd, data, errorTitle, MB_OK | MB_ICONERROR);
+
+        free(errorTitle);
+        free(errorMessage);
+        free(data);
         return 1;
     }
     else if (!(attributes & FILE_ATTRIBUTE_DIRECTORY)) {
-        LPTSTR data = ConcatenateStrings("\"", dDest);
-        data = ConcatenateStrings(data, "\"");
-        data = ConcatenateStrings(data, GetStringFromResource(TEXT_NOT_DIR));
-        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+        LPTSTR errorMessage = GetStringFromResource(TEXT_NOT_DIR);
+        LPTSTR lArr[] = { "\"", dDest, "\"", errorMessage };
+        LPTSTR data = ConcatenateStrings(lArr, 4);
+        MessageBox(hwnd, data, errorTitle, MB_OK | MB_ICONERROR);
+
+        free(errorTitle);
+        free(errorMessage);
+        free(data);
         return 1;
     }
     return 0;
@@ -501,55 +585,92 @@ int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest) {
 
 int ErrorIncorrectFrequency(HWND hwnd, int freq) {
     if (freq == 0) {
-        LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_ICORRECT_FREQUENCY));
-        MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
+        LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+        LPTSTR errorMessage = GetStringFromResource(TEXT_ICORRECT_FREQUENCY);
+        LPTSTR lArr[] = { "", errorMessage };
+        LPTSTR data = ConcatenateStrings(lArr, 2);
+        MessageBox(hwnd, data, errorTitle, MB_OK | MB_ICONERROR);
+
+        free(errorTitle);
+        free(errorMessage);
+        free(data);
         return 1;
     }
     return 0;
 }
 
-void ErrorWrong(HWND hwnd) {
-    LPTSTR data = ConcatenateStrings("", GetStringFromResource(TEXT_WRONG));
-    MessageBox(hwnd, data, GetStringFromResource(TEXT_ERROR), MB_OK | MB_ICONERROR);
-}
-
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq) {
-    LPTSTR data = ConcatenateStrings(GetStringFromResource(TEXT_FILE), _T(" \""));
-    data = ConcatenateStrings(data, fSource);
-    data = ConcatenateStrings(data, _T("\" "));
-    data = ConcatenateStrings(data, GetStringFromResource(TEXT_TO));
-    data = ConcatenateStrings(data, _T(" \""));
-    data = ConcatenateStrings(data, dDest);
-    data = ConcatenateStrings(data, _T("\" "));
-    data = ConcatenateStrings(data, GetStringFromResource(TEXT_FREQ));
-    data = ConcatenateStrings(data, " ");
+    LPTSTR lh = (LPTSTR)malloc((5) * sizeof(TCHAR));
+    swprintf(lh, sizeof(lh) / sizeof(TCHAR), L"%d", minFreq / 60);
 
-    LPTSTR str = (LPTSTR)malloc((5) * sizeof(TCHAR));
-    swprintf(str, sizeof(str) / sizeof(wchar_t), L"%d", minFreq / 60);
-    data = ConcatenateStrings(data, str);
-    data = ConcatenateStrings(data, GetStringFromResource(TEXT_HOUR));
-    data = ConcatenateStrings(data, " ");
-    swprintf(str, sizeof(str) / sizeof(wchar_t), L"%d", minFreq % 60);
-    data = ConcatenateStrings(data, str);
-    data = ConcatenateStrings(data, GetStringFromResource(TEXT_MINUTE));
+    LPTSTR lm = (LPTSTR)malloc((5) * sizeof(TCHAR));
+    swprintf(lm, sizeof(lm) / sizeof(TCHAR), L"%d", minFreq % 60);
+
+    LPTSTR file = GetStringFromResource(TEXT_FILE);
+    LPTSTR to = GetStringFromResource(TEXT_TO);
+    LPTSTR freq = GetStringFromResource(TEXT_FREQ);
+    LPTSTR hour = GetStringFromResource(TEXT_HOUR);
+    LPTSTR minute = GetStringFromResource(TEXT_MINUTE);
+    LPTSTR lArr[] = { file, _T(" \""), fSource, _T("\" "), to, _T(" \""),
+                        dDest, _T("\" "), freq, " ",  lh, hour, " ", lm, minute };
+    LPTSTR data = ConcatenateStrings(lArr, 15);
     MessageBox(hwnd, data, GetStringFromResource(TEXT_INFO), MB_OK);
+    free(data); free(lh); free(lm); free(file);
+    free(to); free(freq); free(hour); free(minute);
 }
 
 int GetEnteredNumber(LPTSTR number) {
-    return _tstoi(number) % (MAX_NUMUPDOWN_VALUE + 1);
+    int n = _tstoi(number);
+    if (n > MAX_NUMUPDOWN_VALUE)
+        return MAX_NUMUPDOWN_VALUE;
+    else
+        return n;
 }
 
-int WriteDataIntoFile(const struct dataAboutFile* data) {
+int WriteDataIntoBinFile(const struct dataAboutFile* data) {
+    int recordCount;
+    if ((recordCount = RecordCountInBinFile()) == -1)
+        return -1;
+
+    if (recordCount >= MAX_RECORDS)
+        return 1;
+
     HANDLE hFile = CreateFile(_T("datafile.bin"), GENERIC_WRITE,            
-        0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);                       
+        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hFile == INVALID_HANDLE_VALUE)
-        return 0;
+        return -1;
 
+    SetFilePointer(hFile, 0, NULL, FILE_END);
     DWORD bytesWritten;
     if (!WriteFile(hFile, data, sizeof(struct dataAboutFile), &bytesWritten, NULL))
-        return 0;
+        return -1;
 
     CloseHandle(hFile);
-    return 1;
+    return 0;
+}
+
+int RecordCountInBinFile() {
+    struct dataAboutFile* data = (struct dataAboutFile*)malloc(sizeof(struct dataAboutFile) * MAX_RECORDS);
+    HANDLE hFile = CreateFile(_T("datafile.bin"), GENERIC_READ,
+        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return -1;
+    }
+
+    DWORD bytesRead;
+    BOOL result = ReadFile(hFile, data,
+        sizeof(struct dataAboutFile) * MAX_RECORDS, &bytesRead, NULL);
+
+    if (!result || bytesRead % sizeof(struct dataAboutFile) != 0) {
+        CloseHandle(hFile); 
+        return -1;
+    }
+
+    size_t recordCount = bytesRead / sizeof(struct dataAboutFile);
+
+    CloseHandle(hFile);
+    free(data);
+    return recordCount;
 }
