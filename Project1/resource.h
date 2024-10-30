@@ -1,7 +1,38 @@
 //{{NO_DEPENDENCIES}}
 // Включаемый файл, созданный в Microsoft Visual C++.
-// Используется Resource.rc
+// Используется language.rc
 //
+#define VS_VERSION_INFO                 1
+#define BUTTON_ADD                      101
+#define BUTTON_HIDE_ADD                 102
+#define BUTTON_LANG                     103
+#define BUTTON_SELECT_FILE              104
+#define BUTTON_SELECT_DIR               105
+#define BUTTON_CREATE                   106
+#define BUTTON_ALL_FILES                107
+#define BUTTON_HIDE_ALL_FILES           108
+#define LABEL_SOURCE                    201
+#define LABEL_DEST                      202
+#define LABEL_FREQUENCY                 203
+#define LABEL_HOUR                      204
+#define LABEL_MINUTE                    205
+#define TEXT_ERROR                      301
+#define TEXT_FILE_NOT_EXIST             302
+#define TEXT_DIR_NOT_EXIST              303
+#define TEXT_NOT_FILLED                 304
+#define TEXT_NOT_FILE                   305
+#define TEXT_NOT_DIR                    306
+#define TEXT_ICORRECT_FREQUENCY         307
+#define TEXT_FILE                       308
+#define TEXT_TO                         309
+#define TEXT_FREQ                       3010
+#define TEXT_HOUR                       3011
+#define TEXT_MINUTE                     3012
+#define TEXT_INFO                       3013
+#define TEXT_WRONG                      3014
+#define TEXT_BI_TITLE                   3015
+#define TEXT_LIMIT_FILES                3016
+#define IDC_STATIC                      -1
 
 // Next default values for new objects
 // 
@@ -10,6 +41,6 @@
 #define _APS_NEXT_RESOURCE_VALUE        101
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1001
-#define _APS_NEXT_SYMED_VALUE           101
+#define _APS_NEXT_SYMED_VALUE           102
 #endif
 #endif

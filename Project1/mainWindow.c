@@ -16,6 +16,8 @@
 
 #define MAX_RECORDS 100
 
+#define BUTTON_WIDTH 100 
+#define BUTTON_HEIGHT 25
 #define ID_BTN_ADD 101
 #define ID_BTN_HIDE_ADD 102
 #define ID_BTN_LANG 103
@@ -24,26 +26,41 @@
 #define ID_BTN_CREATE 106
 #define ID_BTN_ALL_FILES 107
 #define ID_BTN_HIDE_ALL_FILES 108
+#define ID_BTN_SELECT_DIR_CHANGE 109
+#define ID_BTN_DELETE_ALL_FILES 1010
+#define ID_BTN_CHANGE_ALL_FILES 1011
 
+#define EDIT_WIDTH 400
+#define EDIT_HEIGHT 20
 #define ID_EDIT_SOURCE 201
 #define ID_EDIT_DEST 202
 #define ID_EDIT_HOUR 203
 #define ID_EDIT_MINUTE 204
+#define ID_EDIT_DEST_CHANGE 205
+#define ID_EDIT_HOUR_CHANGE 206
+#define ID_EDIT_MINUTE_CHANGE 207
 
 #define ID_LBL_SOURCE 301
 #define ID_LBL_DEST 302
 #define ID_LBL_FREQUENCY 303
 #define ID_LBL_HOUR 304
 #define ID_LBL_MINUTE 305
+#define ID_LBL_DEST_CHANGE 306
+#define ID_LBL_FREQUENCY_CHANGE 307
+#define ID_LBL_HOUR_CHANGE 308
+#define ID_LBL_MINUTE_CHANGE 309
 
 #define ID_UPDOWN_HOUR 401
 #define ID_UPDOWN_MINUTE 402
+#define ID_UPDOWN_HOUR_CHANGE 403
+#define ID_UPDOWN_MINUTE_CHANGE 404
 
-#define BUTTON_WIDTH 100 
-#define BUTTON_HEIGHT 25
+#define LISTBOX_WIDTH 670 
+#define LISTBOX_HEIGHT(countStrings) 20*countStrings
+#define MAX_COUNT_STRINGS 30
+#define ID_LB_ALL_FILES 501
 
-#define EDIT_WIDTH 400
-#define EDIT_HEIGHT 20
+#define BIN_FILE_PATH "datafile.bin"
 
 struct component {
     HWND cmp;
@@ -57,8 +74,8 @@ struct component {
 };
 
 struct dataAboutFile {
-    LPTSTR fSource[MAX_PATH];
-    LPTSTR dDest[MAX_PATH];
+    TCHAR fSource[MAX_PATH];
+    TCHAR dDest[MAX_PATH];
     DWORD frequency;
 };
 
@@ -81,7 +98,20 @@ struct component cmpInfo[] = {
     {NULL, "button", BUTTON_HIDE_ADD, ID_BTN_HIDE_ADD, 120, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
 
     {NULL, "button", BUTTON_ALL_FILES, ID_BTN_ALL_FILES, 10, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
-    {NULL, "button", BUTTON_HIDE_ALL_FILES, ID_BTN_HIDE_ALL_FILES, 10, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_DELETE_ALL_FILES, ID_BTN_DELETE_ALL_FILES, 690, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_CHANGE_ALL_FILES, ID_BTN_CHANGE_ALL_FILES, 690, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "listbox", 0, ID_LB_ALL_FILES, 120, 10, LISTBOX_WIDTH, LISTBOX_HEIGHT(5), SW_HIDE, FALSE},
+    {NULL, "label", LABEL_DEST_CHANGE, ID_LBL_DEST_CHANGE, 120, 70, 150, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_FREQUENCY_CHANGE, ID_LBL_FREQUENCY_CHANGE, 120, 70, 150, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_HOUR_CHANGE, ID_LBL_HOUR_CHANGE, 280, 70, 10, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_MINUTE_CHANGE, ID_LBL_MINUTE_CHANGE, 360, 70, 25, 20, SW_HIDE, FALSE},
+    {NULL, "edit", 0, ID_EDIT_DEST_CHANGE, 280, 50, EDIT_WIDTH, EDIT_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "nedit", 0, ID_EDIT_HOUR_CHANGE, 290, 70, 50, 20, SW_HIDE, FALSE},
+    {NULL, "updown", 0, ID_UPDOWN_HOUR_CHANGE, 0, 0, 0, 0, SW_HIDE, FALSE},
+    {NULL, "nedit", 0, ID_EDIT_MINUTE_CHANGE, 390, 70, 50, 20, SW_HIDE, FALSE},
+    {NULL, "updown", 0, ID_UPDOWN_MINUTE_CHANGE, 0, 0, 0, 0, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_SELECT_DIR_CHANGE, ID_BTN_SELECT_DIR_CHANGE, 690, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_HIDE_ALL_FILES, ID_BTN_HIDE_ALL_FILES, 120, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
 
     {NULL, "button", BUTTON_LANG, ID_BTN_LANG, 0, 0, 40, BUTTON_HEIGHT, SW_SHOW, TRUE},
 
@@ -142,7 +172,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         break;
     }
     case WM_COMMAND: {
-        CommandsOfComponents(hwnd, wParam);
+        CommandsOfComponents(hwnd, wParam, lParam);
         break;
     }
     case WM_DESTROY: {
@@ -168,6 +198,8 @@ void InitializeCompnents(HWND hwnd) {
             cmpInfo[i].cmp = CreateLabel(hwnd, cmpInfo[i]);
         else if (cmpInfo[i].type == "updown")
             cmpInfo[i].cmp = CreateUpDown(hwnd, cmpInfo[i]);
+        else if (cmpInfo[i].type == "listbox")
+            cmpInfo[i].cmp = CreateListBox(hwnd, cmpInfo[i]);
 
         ShowWindow(cmpInfo[i].cmp, cmpInfo[i].initShow);
     }
@@ -262,7 +294,7 @@ HWND CreateUpDown(HWND hwnd, struct component tmr) {
     HWND hwndSpin = CreateWindow(UPDOWN_CLASS, "",
         WS_CHILD | WS_VISIBLE | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_NOTHOUSANDS,
         0, 0, 0, 0,
-        hwnd, (HMENU)500, NULL, NULL);
+        hwnd, (HMENU)tmr.id, NULL, NULL);
     
     int indexOfEdit = 0;
     switch (tmr.id) {
@@ -270,9 +302,18 @@ HWND CreateUpDown(HWND hwnd, struct component tmr) {
         indexOfEdit = ID_EDIT_HOUR;
         break;
     }
-    case ID_UPDOWN_MINUTE:
+    case ID_UPDOWN_MINUTE: {
         indexOfEdit = ID_EDIT_MINUTE;
         break;
+    }
+    case ID_UPDOWN_HOUR_CHANGE: {
+        indexOfEdit = ID_EDIT_HOUR_CHANGE;
+        break;
+    }
+    case ID_UPDOWN_MINUTE_CHANGE: {
+        indexOfEdit = ID_EDIT_MINUTE_CHANGE;
+        break;
+    }
     }
 
     SendMessage(hwndSpin, UDM_SETBUDDY, (WPARAM)cmpInfo[GetIndexOfComponent(indexOfEdit)].cmp, 0);
@@ -281,11 +322,18 @@ HWND CreateUpDown(HWND hwnd, struct component tmr) {
     return hwndSpin;
 }
 
+HWND CreateListBox(HWND hwnd, struct component lb) {
+    HWND comboBox = CreateWindow(TEXT("LISTBOX"), "", WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_BORDER,
+        lb.x, lb.y, lb.width, lb.height,
+        hwnd, (HMENU)ID_LB_ALL_FILES, NULL, NULL);
+    return comboBox;
+}
+
 // Command processing 
-void CommandsOfComponents(HWND hwnd, WPARAM wParam) {
+void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     switch (LOWORD(wParam)) {
     case ID_BTN_ADD: {
-        OnClickButtonMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
+        ShowAuxiliaryComponents(ID_BTN_ADD, ID_BTN_HIDE_ADD);
         break;
     }
     case ID_BTN_HIDE_ADD: {
@@ -309,8 +357,15 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam) {
         break;
     }
     case ID_BTN_ALL_FILES: {
-        OnClickButtonMainMenu(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
-        //ShowFilesFromBinFile(hwnd);
+        if (ChangeComponentsCoords(hwnd) == -1) {
+            ErrorTextOnly(hwnd, TEXT_WRONG);
+            break;
+        }
+        ShowAuxiliaryComponents(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
+        if (ShowFilesFromBinFile(hwnd) == -1) {
+            ErrorTextOnly(hwnd, TEXT_WRONG);
+            break;
+        }
         break;
     }
     case ID_BTN_HIDE_ALL_FILES: {
@@ -318,9 +373,16 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam) {
         break;
     }
     }
+
+    // Clicking on a listbox element
+    if (HIWORD(wParam) == LBN_SELCHANGE) {
+        if ((HWND)lParam == cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp) {
+            ShowInfoAboutFile(lParam);
+        }
+    }
 }
 
-void OnClickButtonMainMenu(int idBtnMainMenu, int idHideButton) {
+void ShowAuxiliaryComponents(int idBtnMainMenu, int idHideButton) {
     int indexBtnMainMenu = GetIndexOfComponent(idBtnMainMenu);
     int indexHideButton = GetIndexOfComponent(idHideButton);
 
@@ -423,7 +485,11 @@ void OnClickButtonCreate(HWND hwnd) {
             return;
         }
 
-        struct dataAboutFile data = { fSource, dDest, minFreq };
+        struct dataAboutFile data;
+        _tcscpy_s(data.fSource, MAX_PATH, fSource);
+        _tcscpy_s(data.dDest, MAX_PATH, dDest);
+        data.frequency = minFreq;
+
         int res = WriteDataIntoBinFile(&data);
         if (res == -1) {
             free(fSource); free(dDest); free(hour); free(minutes);
@@ -441,6 +507,82 @@ void OnClickButtonCreate(HWND hwnd) {
         HideComponentsMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
         free(fSource); free(dDest); free(hour); free(minutes);
     }
+}
+
+void ChangeYOfComponent(int idCmp, int idDepCmp) {
+    int index = GetIndexOfComponent(idCmp);
+    int depIndex = GetIndexOfComponent(idDepCmp);
+    MoveWindow(cmpInfo[index].cmp, cmpInfo[index].x, cmpInfo[depIndex].y + cmpInfo[depIndex].height + 10, cmpInfo[index].width, cmpInfo[index].height, TRUE);
+    cmpInfo[index].y = cmpInfo[depIndex].y + cmpInfo[depIndex].height + 10;
+}
+
+void ChangePositionUpDown(HWND hwnd, int idUD, int idEdit) {
+    RECT rect;
+    GetWindowRect(cmpInfo[GetIndexOfComponent(idEdit)].cmp, &rect);
+
+    ScreenToClient(hwnd, (POINT*)&rect.left);
+    ScreenToClient(hwnd, (POINT*)&rect.right);
+
+    int newX = rect.right - 10; 
+    int newY = rect.top; 
+
+    SetWindowPos(cmpInfo[GetIndexOfComponent(idUD)].cmp, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+}
+
+int ChangeComponentsCoords(HWND hwnd) {
+    int countStrings = RecordCountInBinFile();
+    if (countStrings == -1)
+        return -1;
+
+    int maxCountStrings = countStrings;
+    if (maxCountStrings > MAX_COUNT_STRINGS) {
+        maxCountStrings = MAX_COUNT_STRINGS;
+    }
+
+    int index = GetIndexOfComponent(ID_LB_ALL_FILES);
+    int depIndex = -1;
+    MoveWindow(cmpInfo[index].cmp, cmpInfo[index].x, cmpInfo[index].y, cmpInfo[index].width, LISTBOX_HEIGHT(maxCountStrings), TRUE);
+    cmpInfo[index].height = LISTBOX_HEIGHT(maxCountStrings);
+
+    ChangeYOfComponent(ID_LBL_DEST_CHANGE, ID_LB_ALL_FILES);
+    ChangeYOfComponent(ID_EDIT_DEST_CHANGE, ID_LB_ALL_FILES);
+    ChangeYOfComponent(ID_BTN_SELECT_DIR_CHANGE, ID_LB_ALL_FILES);
+    ChangeYOfComponent(ID_LBL_FREQUENCY_CHANGE, ID_EDIT_DEST_CHANGE);
+    ChangeYOfComponent(ID_LBL_HOUR_CHANGE, ID_EDIT_DEST_CHANGE);
+    ChangeYOfComponent(ID_EDIT_HOUR_CHANGE, ID_EDIT_DEST_CHANGE);
+    ChangePositionUpDown(hwnd, ID_UPDOWN_HOUR_CHANGE, ID_EDIT_HOUR_CHANGE);
+    ChangeYOfComponent(ID_LBL_MINUTE_CHANGE, ID_EDIT_DEST_CHANGE);
+    ChangeYOfComponent(ID_EDIT_MINUTE_CHANGE, ID_EDIT_DEST_CHANGE);
+    ChangePositionUpDown(hwnd, ID_UPDOWN_MINUTE_CHANGE, ID_EDIT_MINUTE_CHANGE);
+    ChangeYOfComponent(ID_BTN_CHANGE_ALL_FILES, ID_LBL_DEST_CHANGE);
+    ChangeYOfComponent(ID_BTN_DELETE_ALL_FILES, ID_LBL_FREQUENCY_CHANGE);
+    ChangeYOfComponent(ID_BTN_HIDE_ALL_FILES, ID_LBL_FREQUENCY_CHANGE);
+
+    return 0;
+}
+
+int ShowFilesFromBinFile(hwnd) {
+    int recordCount = 0;
+    struct dataAboutFile* data = GetDataFromBinFile(&recordCount);
+
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_RESETCONTENT, 0, 0);
+    for (int i = 0; i < recordCount; i++) {
+        LPTSTR message = data[i].fSource;
+        SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_ADDSTRING, 0, (LPARAM)message);
+    }
+
+    free(data);
+    return 0;
+}
+
+void ShowInfoAboutFile(LPARAM lParam) {
+    int selectedIndex = SendMessage((HWND)lParam, LB_GETCURSEL, 0, 0);
+
+    int recordCount = 0;
+    struct dataAboutFile* data = GetDataFromBinFile(&recordCount);
+    
+    LPTSTR dDest = data[selectedIndex].dDest;
+    int freq = data[selectedIndex].frequency;
 }
 
 int GetIndexOfComponent(int id) {
@@ -461,7 +603,7 @@ char* OpenFileDialog(HWND hwnd) {
     ofn.hwndOwner = hwnd;
     ofn.lpstrFile = fileName;
     ofn.nMaxFile = MAX_PATH;
-    ofn.lpstrFilter = "All Files (*.*)\0*.*\0Text Files (*.txt)\0*.txt\0";
+    ofn.lpstrFilter = _T("All Files (*.*)\0*.*\0Text Files (*.txt)\0*.txt\0");
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
@@ -635,7 +777,7 @@ int WriteDataIntoBinFile(const struct dataAboutFile* data) {
     if (recordCount >= MAX_RECORDS)
         return 1;
 
-    HANDLE hFile = CreateFile(_T("datafile.bin"), GENERIC_WRITE,            
+    HANDLE hFile = CreateFile(_T(BIN_FILE_PATH), GENERIC_WRITE,            
         0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hFile == INVALID_HANDLE_VALUE)
@@ -650,9 +792,32 @@ int WriteDataIntoBinFile(const struct dataAboutFile* data) {
     return 0;
 }
 
+struct dataAboutFile* GetDataFromBinFile(int* recordCount) {
+    struct dataAboutFile* data = (struct dataAboutFile*)malloc(sizeof(struct dataAboutFile) * MAX_RECORDS);
+    HANDLE hFile = CreateFile(_T(BIN_FILE_PATH), GENERIC_READ,
+        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return -1;
+    }
+
+    DWORD bytesRead;
+    BOOL result = ReadFile(hFile, data,
+        sizeof(struct dataAboutFile) * MAX_RECORDS, &bytesRead, NULL);
+
+    if (!result || bytesRead % sizeof(struct dataAboutFile) != 0) {
+        CloseHandle(hFile);
+        return -1;
+    }
+
+    *recordCount = bytesRead / sizeof(struct dataAboutFile);
+    CloseHandle(hFile);
+    return data;
+}
+
 int RecordCountInBinFile() {
     struct dataAboutFile* data = (struct dataAboutFile*)malloc(sizeof(struct dataAboutFile) * MAX_RECORDS);
-    HANDLE hFile = CreateFile(_T("datafile.bin"), GENERIC_READ,
+    HANDLE hFile = CreateFile(_T(BIN_FILE_PATH), GENERIC_READ,
         0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hFile == INVALID_HANDLE_VALUE) {
