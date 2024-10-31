@@ -1,9 +1,8 @@
 #include <windows.h>
 #include <shlobj.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <tchar.h>
 #include "mainWindow.h"
+#include "mainFunctions.h"
 #include "resource1.h"
 
 #define MIN_WINDOW_SIZE_X 830
@@ -13,8 +12,6 @@
 
 #define MIN_NUMUPDOWN_VALUE 0
 #define MAX_NUMUPDOWN_VALUE 100
-
-#define MAX_RECORDS 100
 
 #define BUTTON_WIDTH 100 
 #define BUTTON_HEIGHT 25
@@ -56,28 +53,9 @@
 #define ID_UPDOWN_MINUTE_CHANGE 404
 
 #define LISTBOX_WIDTH 670 
-#define LISTBOX_HEIGHT(countStrings) 20*countStrings
+#define LISTBOX_HEIGHT(countStrings) 18*countStrings
 #define MAX_COUNT_STRINGS 30
 #define ID_LB_ALL_FILES 501
-
-#define BIN_FILE_PATH "datafile.bin"
-
-struct component {
-    HWND cmp;
-    char* type;
-    UINT name;
-    int id;
-    int x, y;
-    int width, height;
-    int initShow;
-    BOOL isAlwaysVisible;
-};
-
-struct dataAboutFile {
-    TCHAR fSource[MAX_PATH];
-    TCHAR dDest[MAX_PATH];
-    DWORD frequency;
-};
 
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
@@ -104,11 +82,11 @@ struct component cmpInfo[] = {
     {NULL, "label", LABEL_DEST_CHANGE, ID_LBL_DEST_CHANGE, 120, 70, 150, 20, SW_HIDE, FALSE},
     {NULL, "label", LABEL_FREQUENCY_CHANGE, ID_LBL_FREQUENCY_CHANGE, 120, 70, 150, 20, SW_HIDE, FALSE},
     {NULL, "label", LABEL_HOUR_CHANGE, ID_LBL_HOUR_CHANGE, 280, 70, 10, 20, SW_HIDE, FALSE},
-    {NULL, "label", LABEL_MINUTE_CHANGE, ID_LBL_MINUTE_CHANGE, 360, 70, 25, 20, SW_HIDE, FALSE},
+    {NULL, "label", LABEL_MINUTE_CHANGE, ID_LBL_MINUTE_CHANGE, 380, 70, 25, 20, SW_HIDE, FALSE},
     {NULL, "edit", 0, ID_EDIT_DEST_CHANGE, 280, 50, EDIT_WIDTH, EDIT_HEIGHT, SW_HIDE, FALSE},
     {NULL, "nedit", 0, ID_EDIT_HOUR_CHANGE, 290, 70, 50, 20, SW_HIDE, FALSE},
     {NULL, "updown", 0, ID_UPDOWN_HOUR_CHANGE, 0, 0, 0, 0, SW_HIDE, FALSE},
-    {NULL, "nedit", 0, ID_EDIT_MINUTE_CHANGE, 390, 70, 50, 20, SW_HIDE, FALSE},
+    {NULL, "nedit", 0, ID_EDIT_MINUTE_CHANGE, 410, 70, 50, 20, SW_HIDE, FALSE},
     {NULL, "updown", 0, ID_UPDOWN_MINUTE_CHANGE, 0, 0, 0, 0, SW_HIDE, FALSE},
     {NULL, "button", BUTTON_SELECT_DIR_CHANGE, ID_BTN_SELECT_DIR_CHANGE, 690, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
     {NULL, "button", BUTTON_HIDE_ALL_FILES, ID_BTN_HIDE_ALL_FILES, 120, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
@@ -349,7 +327,7 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam) {
         break;
     }
     case ID_BTN_SELECT_DIR: {
-        OnClickSelectDir(hwnd);
+        OnClickSelectDir(hwnd, ID_EDIT_DEST);
         break;
     }
     case ID_BTN_CREATE: {
@@ -370,6 +348,18 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     }
     case ID_BTN_HIDE_ALL_FILES: {
         HideComponentsMainMenu(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
+        break;
+    }
+    case ID_BTN_SELECT_DIR_CHANGE: {
+        OnClickSelectDir(hwnd, ID_EDIT_DEST_CHANGE);
+        break;
+    }
+    case ID_BTN_CHANGE_ALL_FILES: {
+        OnClickButtonChange(hwnd, lParam);
+        break;
+    }
+    case ID_BTN_DELETE_ALL_FILES: {
+        OnClickDeleteAllFiles(hwnd, lParam);
         break;
     }
     }
@@ -407,12 +397,17 @@ void HideComponentsMainMenu(int idBtnMainMenu, int idHideButton) {
     }
 }
 
-
 void ResetComponentsCaptionsToAdd(){
     SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, "");
     SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, "");
     SendMessage(cmpInfo[GetIndexOfComponent(ID_UPDOWN_HOUR)].cmp, UDM_SETPOS32, 0, 0);
     SendMessage(cmpInfo[GetIndexOfComponent(ID_UPDOWN_MINUTE)].cmp, UDM_SETPOS32, 0, 0);
+}
+
+void ResetComponentsCaptionsToAllFiles() {
+    SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST_CHANGE)].cmp, "");
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR_CHANGE)].cmp, UDM_SETPOS32, 0, 0);
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE_CHANGE)].cmp, UDM_SETPOS32, 0, 0);
 }
 
 void OnClickButtonLang(HWND hwnd) {
@@ -439,10 +434,10 @@ void OnClickSelectFile(HWND hwnd) {
     free(filePath);
 }
 
-void OnClickSelectDir(HWND hwnd) {
+void OnClickSelectDir(HWND hwnd, int idEditDest) {
     char* filePath = SelectFolder(hwnd);
     if (filePath != NULL && filePath[0] != '\0')
-        SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, filePath);
+        SetWindowText(cmpInfo[GetIndexOfComponent(idEditDest)].cmp, filePath);
     free(filePath);
 }
 
@@ -456,57 +451,57 @@ void OnClickButtonCreate(HWND hwnd) {
         ErrorTextOnly(hwnd, TEXT_NOT_FILLED);
         return;
     }
-    else {
-        LPTSTR fSource = (LPTSTR)malloc((lenS + 1) * sizeof(TCHAR));
-        GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, fSource, lenS + 1);
-        if (ErrorIncorrectFilePath(hwnd, fSource)) {
-            free(fSource);
-            return;
-        }
 
-        LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
-        GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, dDest, lenS + 1);
-        if (ErrorIncorrectDirPath(hwnd, dDest)) {
-            free(fSource); free(dDest);
-            return;
-        }
-
-        LPTSTR hour = (LPTSTR)malloc((lenH + 1) * sizeof(TCHAR));
-        GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR)].cmp, hour, lenH + 1);
-        int h = GetEnteredNumber(hour);
-
-        LPTSTR minutes = (LPTSTR)malloc((lenM + 1) * sizeof(TCHAR));
-        GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE)].cmp, minutes, lenM + 1);
-        int m = GetEnteredNumber(minutes);
-
-        int minFreq = h * 60 + m;
-        if (ErrorIncorrectFrequency(hwnd, minFreq)) {
-            free(fSource); free(dDest); free(hour); free(minutes);
-            return;
-        }
-
-        struct dataAboutFile data;
-        _tcscpy_s(data.fSource, MAX_PATH, fSource);
-        _tcscpy_s(data.dDest, MAX_PATH, dDest);
-        data.frequency = minFreq;
-
-        int res = WriteDataIntoBinFile(&data);
-        if (res == -1) {
-            free(fSource); free(dDest); free(hour); free(minutes);
-            ErrorTextOnly(hwnd, TEXT_WRONG);
-            return;
-        }
-        else if (res == 1) {
-            free(fSource); free(dDest); free(hour); free(minutes);
-            ErrorTextOnly(hwnd, TEXT_LIMIT_FILES);
-            return;
-        }
-
-        InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
-        ResetComponentsCaptionsToAdd();
-        HideComponentsMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
-        free(fSource); free(dDest); free(hour); free(minutes);
+    LPTSTR fSource = (LPTSTR)malloc((lenS + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, fSource, lenS + 1);
+    if (ErrorIncorrectFilePath(hwnd, fSource)) {
+        free(fSource);
+        return;
     }
+
+    LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, dDest, lenD + 1);
+    if (ErrorIncorrectDirPath(hwnd, dDest)) {
+        free(fSource); free(dDest);
+        return;
+    }
+
+    LPTSTR hour = (LPTSTR)malloc((lenH + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR)].cmp, hour, lenH + 1);
+    int h = GetEnteredNumber(hour);
+
+    LPTSTR minutes = (LPTSTR)malloc((lenM + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE)].cmp, minutes, lenM + 1);
+    int m = GetEnteredNumber(minutes);
+
+    int minFreq = h * 60 + m;
+    if (ErrorIncorrectFrequency(hwnd, minFreq)) {
+        free(fSource); free(dDest); free(hour); free(minutes);
+        return;
+    }
+
+    struct dataAboutFile data;
+    _tcscpy_s(data.fSource, MAX_PATH, fSource);
+    _tcscpy_s(data.dDest, MAX_PATH, dDest);
+    data.frequency = minFreq;
+    data.lastCopy = GetNowTime();
+
+    int res = WriteDataIntoBinFile(&data);
+    if (res == -1) {
+        free(fSource); free(dDest); free(hour); free(minutes);
+        ErrorTextOnly(hwnd, TEXT_WRONG);
+        return;
+    }
+    else if (res == 1) {
+        free(fSource); free(dDest); free(hour); free(minutes);
+        ErrorTextOnly(hwnd, TEXT_LIMIT_FILES);
+        return;
+    }
+
+    InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
+    ResetComponentsCaptionsToAdd();
+    HideComponentsMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
+    free(fSource); free(dDest); free(hour); free(minutes);
 }
 
 void ChangeYOfComponent(int idCmp, int idDepCmp) {
@@ -523,7 +518,7 @@ void ChangePositionUpDown(HWND hwnd, int idUD, int idEdit) {
     ScreenToClient(hwnd, (POINT*)&rect.left);
     ScreenToClient(hwnd, (POINT*)&rect.right);
 
-    int newX = rect.right - 10; 
+    int newX = rect.right; 
     int newY = rect.top; 
 
     SetWindowPos(cmpInfo[GetIndexOfComponent(idUD)].cmp, NULL, newX, newY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
@@ -561,6 +556,129 @@ int ChangeComponentsCoords(HWND hwnd) {
     return 0;
 }
 
+void OnClickButtonChange(HWND hwnd, LPARAM lParam) {
+    int selectedIndex = SendMessage((HWND)lParam, LB_GETCURSEL, 0, 0);
+    if (selectedIndex == LB_ERR) {
+        ErrorTextOnly(hwnd, TEXT_FILE_NOT_SELECTED);
+        return;
+    }
+
+    BOOL isSelected = FALSE;
+    int count = SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETCOUNT, 0, 0);
+    for (int i = 0; i < count; i++)
+        if (SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETSEL, i, 0))
+            isSelected = TRUE;
+
+    if (!isSelected) {
+        ErrorTextOnly(hwnd, TEXT_FILE_NOT_SELECTED);
+        return;
+    }
+
+    int lenD = GetWindowTextLength(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST_CHANGE)].cmp);
+    int lenH = GetWindowTextLength(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR_CHANGE)].cmp);
+    int lenM = GetWindowTextLength(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE_CHANGE)].cmp);
+
+    if (lenD <= 0 || lenH <= 0 || lenM <= 0) {
+        ErrorTextOnly(hwnd, TEXT_NOT_FILLED);
+        return;
+    }
+
+    LPTSTR fSource = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETTEXT, selectedIndex, (LPARAM)fSource);
+    if (ErrorIncorrectFilePath(hwnd, fSource)) {
+        free(fSource);
+        return;
+    }
+
+    LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST_CHANGE)].cmp, dDest, lenD + 1);
+    if (ErrorIncorrectDirPath(hwnd, dDest)) {
+        free(fSource); free(dDest);
+        return;
+    }
+
+    LPTSTR hour = (LPTSTR)malloc((lenH + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR_CHANGE)].cmp, hour, lenH + 1);
+    int h = GetEnteredNumber(hour);
+
+    LPTSTR minutes = (LPTSTR)malloc((lenM + 1) * sizeof(TCHAR));
+    GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE_CHANGE)].cmp, minutes, lenM + 1);
+    int m = GetEnteredNumber(minutes);
+
+    int minFreq = h * 60 + m;
+    if (ErrorIncorrectFrequency(hwnd, minFreq)) {
+        free(fSource); free(dDest); free(hour); free(minutes);
+        return;
+    }
+
+    int recs = 0;
+    struct dataAboutFile* info = GetDataFromBinFile(&recs);
+
+    struct dataAboutFile data;
+    _tcscpy_s(data.fSource, MAX_PATH, fSource);
+    _tcscpy_s(data.dDest, MAX_PATH, dDest);
+    data.frequency = minFreq;
+    data.lastCopy = info[selectedIndex].lastCopy;
+
+    RecreateBinFile(&data, selectedIndex);
+    int res = RecreateBinFile(&data, selectedIndex);;
+    if (res == -1) {
+        free(fSource); free(dDest); free(hour); free(minutes);
+        ErrorTextOnly(hwnd, TEXT_WRONG);
+        return;
+    }
+
+    InformationSuccessCreating(hwnd, fSource, dDest, minFreq);
+    ResetComponentsCaptionsToAllFiles();
+    HideComponentsMainMenu(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
+    free(fSource); free(dDest); free(hour); free(minutes); free(info);
+}
+
+void OnClickDeleteAllFiles(HWND hwnd, LPARAM lParam) {
+    int selectedIndex = SendMessage((HWND)lParam, LB_GETCURSEL, 0, 0);
+    if (selectedIndex == LB_ERR) {
+        ErrorTextOnly(hwnd, TEXT_ERROR);
+        return;
+    }
+
+    BOOL isSelected = FALSE;
+    int count = SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETCOUNT, 0, 0);
+    for (int i = 0; i < count; i++)
+        if (SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETSEL, i, 0))
+            isSelected = TRUE;
+
+    if (!isSelected) {
+        ErrorTextOnly(hwnd, TEXT_FILE_NOT_SELECTED);
+        return;
+    }
+
+    LPTSTR fSource = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+    SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETTEXT, selectedIndex, (LPARAM)fSource);
+    if (ErrorIncorrectFilePath(hwnd, fSource)) {
+        free(fSource);
+        return;
+    }
+
+    int res = DeleteRecordFromBinFile(selectedIndex);
+    if (res == -1){
+        free(fSource);
+        ErrorTextOnly(hwnd, TEXT_WRONG);
+        return;
+    }
+
+    InformationSuccessDeleting(hwnd, fSource);
+    if (ChangeComponentsCoords(hwnd) == -1) {
+        ErrorTextOnly(hwnd, TEXT_WRONG);
+        return;
+    }
+    ShowAuxiliaryComponents(ID_BTN_ALL_FILES, ID_BTN_HIDE_ALL_FILES);
+    if (ShowFilesFromBinFile(hwnd) == -1) {
+        ErrorTextOnly(hwnd, TEXT_WRONG);
+        return;
+    }
+    free(fSource);
+}
+
 int ShowFilesFromBinFile(hwnd) {
     int recordCount = 0;
     struct dataAboutFile* data = GetDataFromBinFile(&recordCount);
@@ -583,6 +701,15 @@ void ShowInfoAboutFile(LPARAM lParam) {
     
     LPTSTR dDest = data[selectedIndex].dDest;
     int freq = data[selectedIndex].frequency;
+
+    LPTSTR lh = ConvertIntToLPTSTR(freq / 60);
+    LPTSTR lm = ConvertIntToLPTSTR(freq % 60);
+
+    SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST_CHANGE)].cmp, dDest);
+    SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR_CHANGE)].cmp, lh);
+    SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE_CHANGE)].cmp, lm);
+
+    free(lh); free(lm); free(data);
 }
 
 int GetIndexOfComponent(int id) {
@@ -742,12 +869,8 @@ int ErrorIncorrectFrequency(HWND hwnd, int freq) {
 }
 
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq) {
-    LPTSTR lh = (LPTSTR)malloc((5) * sizeof(TCHAR));
-    swprintf(lh, sizeof(lh) / sizeof(TCHAR), L"%d", minFreq / 60);
-
-    LPTSTR lm = (LPTSTR)malloc((5) * sizeof(TCHAR));
-    swprintf(lm, sizeof(lm) / sizeof(TCHAR), L"%d", minFreq % 60);
-
+    LPTSTR lh = ConvertIntToLPTSTR(minFreq / 60);
+    LPTSTR lm = ConvertIntToLPTSTR(minFreq % 60);
     LPTSTR file = GetStringFromResource(TEXT_FILE);
     LPTSTR to = GetStringFromResource(TEXT_TO);
     LPTSTR freq = GetStringFromResource(TEXT_FREQ);
@@ -757,8 +880,17 @@ void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int min
                         dDest, _T("\" "), freq, " ",  lh, hour, " ", lm, minute };
     LPTSTR data = ConcatenateStrings(lArr, 15);
     MessageBox(hwnd, data, GetStringFromResource(TEXT_INFO), MB_OK);
+
     free(data); free(lh); free(lm); free(file);
     free(to); free(freq); free(hour); free(minute);
+}
+
+void InformationSuccessDeleting(HWND hwnd, LPTSTR fSource) {
+    LPTSTR mes = GetStringFromResource(TEXT_DELETE);
+    LPTSTR lArr[] = { "\"", fSource, _T("\" "), mes };
+    LPTSTR data = ConcatenateStrings(lArr, 4);
+    MessageBox(hwnd, data, GetStringFromResource(TEXT_INFO), MB_OK);
+    free(data); free(mes);
 }
 
 int GetEnteredNumber(LPTSTR number) {
@@ -769,73 +901,31 @@ int GetEnteredNumber(LPTSTR number) {
         return n;
 }
 
-int WriteDataIntoBinFile(const struct dataAboutFile* data) {
-    int recordCount;
-    if ((recordCount = RecordCountInBinFile()) == -1)
-        return -1;
-
-    if (recordCount >= MAX_RECORDS)
-        return 1;
-
-    HANDLE hFile = CreateFile(_T(BIN_FILE_PATH), GENERIC_WRITE,            
-        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE)
-        return -1;
-
-    SetFilePointer(hFile, 0, NULL, FILE_END);
-    DWORD bytesWritten;
-    if (!WriteFile(hFile, data, sizeof(struct dataAboutFile), &bytesWritten, NULL))
-        return -1;
-
-    CloseHandle(hFile);
-    return 0;
+LPTSTR ConvertIntToLPTSTR(int n) {
+    LPTSTR ln = (LPTSTR)malloc((5) * sizeof(TCHAR));
+    swprintf(ln, sizeof(ln) / sizeof(TCHAR), L"%d", n);
+    return ln;
 }
 
-struct dataAboutFile* GetDataFromBinFile(int* recordCount) {
-    struct dataAboutFile* data = (struct dataAboutFile*)malloc(sizeof(struct dataAboutFile) * MAX_RECORDS);
-    HANDLE hFile = CreateFile(_T(BIN_FILE_PATH), GENERIC_READ,
-        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+DWORD GetNowTime() {
+    SYSTEMTIME lst = { 2024, 1, 0, 1, 0, 0, 0, 0 };
+    SYSTEMTIME st;
+    GetSystemTime(&st);
 
-    if (hFile == INVALID_HANDLE_VALUE) {
-        return -1;
-    }
+    FILETIME fNow, fLast;
+    SystemTimeToFileTime(&st, &fNow);
+    SystemTimeToFileTime(&lst, &fLast);
 
-    DWORD bytesRead;
-    BOOL result = ReadFile(hFile, data,
-        sizeof(struct dataAboutFile) * MAX_RECORDS, &bytesRead, NULL);
+    ULARGE_INTEGER uNow, uLast;
 
-    if (!result || bytesRead % sizeof(struct dataAboutFile) != 0) {
-        CloseHandle(hFile);
-        return -1;
-    }
+    uNow.LowPart = fNow.dwLowDateTime;
+    uNow.HighPart = fNow.dwHighDateTime;
+    uLast.LowPart = fLast.dwLowDateTime;
+    uLast.HighPart = fLast.dwHighDateTime;
 
-    *recordCount = bytesRead / sizeof(struct dataAboutFile);
-    CloseHandle(hFile);
-    return data;
-}
+    ULONGLONG dif = uNow.QuadPart - uLast.QuadPart;
+    
+    DWORD nowTimeInMinutes = dif / 600000000;
 
-int RecordCountInBinFile() {
-    struct dataAboutFile* data = (struct dataAboutFile*)malloc(sizeof(struct dataAboutFile) * MAX_RECORDS);
-    HANDLE hFile = CreateFile(_T(BIN_FILE_PATH), GENERIC_READ,
-        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE) {
-        return -1;
-    }
-
-    DWORD bytesRead;
-    BOOL result = ReadFile(hFile, data,
-        sizeof(struct dataAboutFile) * MAX_RECORDS, &bytesRead, NULL);
-
-    if (!result || bytesRead % sizeof(struct dataAboutFile) != 0) {
-        CloseHandle(hFile); 
-        return -1;
-    }
-
-    size_t recordCount = bytesRead / sizeof(struct dataAboutFile);
-
-    CloseHandle(hFile);
-    free(data);
-    return recordCount;
+    return nowTimeInMinutes;
 }

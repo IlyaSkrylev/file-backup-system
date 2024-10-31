@@ -129,9 +129,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.c" />
+    <ClCompile Include="mainFunctions.c" />
     <ClCompile Include="mainWindow.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="mainFunctions.h" />
     <ClInclude Include="mainWindow.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="resource1.h" />

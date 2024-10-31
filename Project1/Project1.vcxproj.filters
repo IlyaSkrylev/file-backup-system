@@ -21,6 +21,9 @@
     <ClCompile Include="mainWindow.c">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="mainFunctions.c">
+      <Filter>Файлы заголовков</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="mainWindow.h">
@@ -31,6 +34,9 @@
     </ClInclude>
     <ClInclude Include="resource1.h">
       <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="mainFunctions.h">
+      <Filter>Исходные файлы</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

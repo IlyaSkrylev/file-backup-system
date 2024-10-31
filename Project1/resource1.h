@@ -40,6 +40,8 @@
 #define TEXT_WRONG 3014
 #define TEXT_BI_TITLE 3015
 #define TEXT_LIMIT_FILES 3016
+#define TEXT_FILE_NOT_SELECTED 3017
+#define TEXT_DELETE 3018
 
 // Next default values for new objects
 // 

@@ -1,5 +1,16 @@
 #include <windows.h>
 
+struct component {
+    HWND cmp;
+    char* type;
+    UINT name;
+    int id;
+    int x, y;
+    int width, height;
+    int initShow;
+    BOOL isAlwaysVisible;
+};
+
 int RunWindow(HINSTANCE hInstance, int nCmdShow);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -22,12 +33,15 @@ void SetApplicationLanguage(BOOL isEnglish);
 void ShowAuxiliaryComponents(int idBtnMainMenu, int idHideButton);
 void HideComponentsMainMenu(int idBtnMainMenu, int idHideButton);
 void ResetComponentsCaptionsToAdd();
+void ResetComponentsCaptionsToAllFiles();
 int ChangeComponentsCoords(HWND hwnd);
 int ShowFilesFromBinFile(hwnd);
 void OnClickButtonLang(HWND hwnd);
 void OnClickSelectFile(HWND hwnd);
-void OnClickSelectDir(HWND hwnd);
+void OnClickSelectDir(HWND hwnd, int idEditDest);
 void OnClickButtonCreate(HWND hwnd);
+void OnClickButtonChange(HWND hwnd, LPARAM lParam);
+void OnClickDeleteAllFiles(HWND hwnd, LPARAM lParam);
 void ShowInfoAboutFile(LPARAM lParam);
 void ChangeYOfComponent(int idCmp, int idDepCmp);
 void ChangePositionUpDown(HWND hwnd, int idUD, int idEdit);
@@ -37,12 +51,12 @@ char* OpenFileDialog(HWND hwnd);
 char* SelectFolder(HWND hwnd);
 LPTSTR ConcatenateStrings(LPTSTR strings[], int len);
 int GetEnteredNumber(LPTSTR number);
-int WriteDataIntoBinFile(const struct dataAboutFile* data);
-struct dataAboutFile* GetDataFromBinFile(int* recordCount);
-int RecordCountInBinFile();
+LPTSTR ConvertIntToLPTSTR(int n);
+DWORD GetNowTime();
 
 void ErrorTextOnly(HWND hwnd, DWORD textInd);
 int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource);
 int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest);
 int ErrorIncorrectFrequency(HWND hwnd, int freq);
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq);
+void InformationSuccessDeleting(HWND hwnd, LPTSTR fSource);
