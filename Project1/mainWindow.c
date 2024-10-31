@@ -57,6 +57,8 @@
 #define MAX_COUNT_STRINGS 30
 #define ID_LB_ALL_FILES 501
 
+#define TIMER_TICK 60000
+
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
     {NULL, "label", LABEL_SOURCE, ID_LBL_SOURCE, 120, 10, 150, 20, SW_HIDE, FALSE},
@@ -120,11 +122,14 @@ int RunWindow(HINSTANCE hInstance, int nCmdShow) {
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
+
+    UINT_PTR timerID = SetTimer(NULL, 0, TIMER_TICK, TimerProc);
     while (GetMessage(&msg, NULL, 0, 0))
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+    KillTimer(NULL, timerID);
     return (int)msg.wParam;
 }
 
@@ -620,8 +625,7 @@ void OnClickButtonChange(HWND hwnd, LPARAM lParam) {
     data.frequency = minFreq;
     data.lastCopy = info[selectedIndex].lastCopy;
 
-    RecreateBinFile(&data, selectedIndex);
-    int res = RecreateBinFile(&data, selectedIndex);;
+    int res = ChangeRecordInBinFile(&data, selectedIndex);;
     if (res == -1) {
         free(fSource); free(dDest); free(hour); free(minutes);
         ErrorTextOnly(hwnd, TEXT_WRONG);
@@ -905,27 +909,4 @@ LPTSTR ConvertIntToLPTSTR(int n) {
     LPTSTR ln = (LPTSTR)malloc((5) * sizeof(TCHAR));
     swprintf(ln, sizeof(ln) / sizeof(TCHAR), L"%d", n);
     return ln;
-}
-
-DWORD GetNowTime() {
-    SYSTEMTIME lst = { 2024, 1, 0, 1, 0, 0, 0, 0 };
-    SYSTEMTIME st;
-    GetSystemTime(&st);
-
-    FILETIME fNow, fLast;
-    SystemTimeToFileTime(&st, &fNow);
-    SystemTimeToFileTime(&lst, &fLast);
-
-    ULARGE_INTEGER uNow, uLast;
-
-    uNow.LowPart = fNow.dwLowDateTime;
-    uNow.HighPart = fNow.dwHighDateTime;
-    uLast.LowPart = fLast.dwLowDateTime;
-    uLast.HighPart = fLast.dwHighDateTime;
-
-    ULONGLONG dif = uNow.QuadPart - uLast.QuadPart;
-    
-    DWORD nowTimeInMinutes = dif / 600000000;
-
-    return nowTimeInMinutes;
 }

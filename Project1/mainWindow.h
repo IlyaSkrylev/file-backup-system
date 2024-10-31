@@ -52,7 +52,6 @@ char* SelectFolder(HWND hwnd);
 LPTSTR ConcatenateStrings(LPTSTR strings[], int len);
 int GetEnteredNumber(LPTSTR number);
 LPTSTR ConvertIntToLPTSTR(int n);
-DWORD GetNowTime();
 
 void ErrorTextOnly(HWND hwnd, DWORD textInd);
 int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource);
