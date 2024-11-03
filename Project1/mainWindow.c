@@ -57,7 +57,7 @@
 #define MAX_COUNT_STRINGS 30
 #define ID_LB_ALL_FILES 501
 
-#define TIMER_TICK 60000
+#define TIMER_TICK 1000
 
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
@@ -123,6 +123,7 @@ int RunWindow(HINSTANCE hInstance, int nCmdShow) {
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
+    //SetConsoleCtrlHandler((PHANDLER_ROUTINE)CTRLHandler, TRUE);
     UINT_PTR timerID = SetTimer(NULL, 0, TIMER_TICK, TimerProc);
     while (GetMessage(&msg, NULL, 0, 0))
     {
@@ -139,6 +140,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     switch (uMsg) {
     case WM_CREATE: {
         InitializeCompnents(hwnd);
+        TakeBinFilePath();
         break;
     }
     case WM_SIZE: {
@@ -159,6 +161,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         break;
     }
     case WM_DESTROY: {
+        free(binFilePath);
         PostQuitMessage(0);
         break;
     }
@@ -186,6 +189,13 @@ void InitializeCompnents(HWND hwnd) {
 
         ShowWindow(cmpInfo[i].cmp, cmpInfo[i].initShow);
     }
+}
+
+void TakeBinFilePath() {
+    LPTSTR currentDir[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, currentDir);
+    binFilePath = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+    _stprintf_s(binFilePath, MAX_PATH, _T("%s\\%s"), currentDir, _T(BIN_FILE_PATH));
 }
 
 void DrawDependsComponents() {
@@ -562,7 +572,7 @@ int ChangeComponentsCoords(HWND hwnd) {
 }
 
 void OnClickButtonChange(HWND hwnd, LPARAM lParam) {
-    int selectedIndex = SendMessage((HWND)lParam, LB_GETCURSEL, 0, 0);
+    int selectedIndex = SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETCURSEL, 0, 0);
     if (selectedIndex == LB_ERR) {
         ErrorTextOnly(hwnd, TEXT_FILE_NOT_SELECTED);
         return;
@@ -639,7 +649,7 @@ void OnClickButtonChange(HWND hwnd, LPARAM lParam) {
 }
 
 void OnClickDeleteAllFiles(HWND hwnd, LPARAM lParam) {
-    int selectedIndex = SendMessage((HWND)lParam, LB_GETCURSEL, 0, 0);
+    int selectedIndex = SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_ALL_FILES)].cmp, LB_GETCURSEL, 0, 0);
     if (selectedIndex == LB_ERR) {
         ErrorTextOnly(hwnd, TEXT_ERROR);
         return;
@@ -741,15 +751,15 @@ char* OpenFileDialog(HWND hwnd) {
     ofn.lpstrInitialDir = NULL;
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-    char currentDir[MAX_PATH];
-    GetCurrentDirectoryA(MAX_PATH, currentDir);
+    LPTSTR currentDir[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, currentDir);
     if (GetOpenFileName(&ofn))
     {
-        SetCurrentDirectoryA(currentDir);
+        SetCurrentDirectory(currentDir);
         return fileName;
     }
 
-    SetCurrentDirectoryA(currentDir);
+    SetCurrentDirectory(currentDir);
     free(fileName);
     return NULL;
 }
@@ -812,7 +822,7 @@ int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource) {
         free(data);
         return 1;
     }
-    else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+    /*else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
         LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
         LPTSTR errorMessage = GetStringFromResource(TEXT_NOT_FILE);
         LPTSTR lArr[] = { "\"", fSource, "\"", errorMessage };
@@ -823,7 +833,7 @@ int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource) {
         free(errorMessage);
         free(data);
         return 1;
-    }
+    }*/
     return 0;
 }
 

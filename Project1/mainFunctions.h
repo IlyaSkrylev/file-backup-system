@@ -1,5 +1,8 @@
 #include <windows.h>
 
+#define BIN_FILE_PATH "datafile.bin"
+LPTSTR binFilePath;
+
 struct dataAboutFile {
     TCHAR fSource[MAX_PATH];
     TCHAR dDest[MAX_PATH];
@@ -22,3 +25,11 @@ void CopyFiles(const struct dataAboutFile* data, int count);
 void GetFileName(const TCHAR* filePath, TCHAR* fName);
 void DivideFileName(const TCHAR* fileName, TCHAR* fName, TCHAR* fType);
 TCHAR* ConvertIntToTCHAR(int n);
+void CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime);
+void CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime);
+void GetCountFilesAndFolders(const LPTSTR dirPath, int* countFiles, int* countFolders);
+void ListFilesAndFolders(const LPTSTR dirPath, LPTSTR* fPaths, const int cFiles, LPTSTR* dPaths, const int cDirs);
+TCHAR* CreatePathToFile(const TCHAR* dest, const TCHAR* file);
+TCHAR* CreatePathToFolder(const TCHAR* dest, const TCHAR* folder);
+TCHAR* NewFolderPath(const TCHAR* dest, const TCHAR* pathToFolder);
+TCHAR* NewFilePath(const TCHAR* dest, const TCHAR* pathToFile);

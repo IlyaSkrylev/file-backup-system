@@ -15,6 +15,7 @@ int RunWindow(HINSTANCE hInstance, int nCmdShow);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void InitializeCompnents(HWND hwnd);
+void TakeBinFilePath();
 void DrawDependsComponents();
 void SetMinMaxSize(LPARAM lParam);
 void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam);
