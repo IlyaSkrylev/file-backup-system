@@ -5,6 +5,20 @@
 #define BIN_FILE_PATH "datafile.bin"
 #define SAVE_FILE_PATH "BackupFiles";
 #define MAX_RECORDS 100
+#define BIN_FILE_PATH "datafile.bin"
+
+LPTSTR binFilePath;
+
+void TakeBinFilePath() {
+    LPTSTR currentDir[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, currentDir);
+    binFilePath = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+    _stprintf_s(binFilePath, MAX_PATH, _T("%s\\%s"), currentDir, _T(BIN_FILE_PATH));
+}
+
+void FreeMemoryBinFile() {
+    free(binFilePath);
+}
 
 void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
     int count = 0;
@@ -237,11 +251,11 @@ void CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime
     CreateDirectory(path, NULL);
 
     int cFiles = 0, cDirs = 0;
-    GetCountFilesAndFolders(dirPath, &cFiles, &cDirs);
+    GetCountFilesAndFolders(dirPath, dest, &cFiles, &cDirs);
     LPTSTR* fPaths = (LPTSTR*)malloc(sizeof(LPTSTR*) * cFiles);
     LPTSTR* dPaths = (LPTSTR*)malloc(sizeof(LPTSTR*) * cDirs);
 
-    ListFilesAndFolders(dirPath, fPaths, cFiles, dPaths, cDirs);
+    ListFilesAndFolders(dirPath, dest, fPaths, cFiles, dPaths, cDirs);
     
     for (int i = 0; i < cFiles; i++) {
         CopyingFile(path, fPaths[i], FALSE);
@@ -253,7 +267,7 @@ void CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime
     free(path);
 }
 
-void GetCountFilesAndFolders(const LPTSTR dirPath, int* countFiles, int* countFolders) {
+void GetCountFilesAndFolders(const LPTSTR dirPath, const LPTSTR dest, int* countFiles, int* countFolders) {
     LPTSTR tmp = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
     _stprintf_s(tmp, MAX_PATH, _T("%s\\*"), dirPath);
     WIN32_FIND_DATA findFileData;
@@ -263,16 +277,16 @@ void GetCountFilesAndFolders(const LPTSTR dirPath, int* countFiles, int* countFo
 
     int cFiles = 0, cFolders = 0;
     do {
-        if (strcmp(findFileData.cFileName, _T(".")) != 0 && strcmp(findFileData.cFileName, _T("..")) != 0) {
-            LPTSTR path = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
-            _stprintf_s(path, MAX_PATH, _T("%s\\%s"), dirPath, findFileData.cFileName);
+        LPTSTR path = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+        _stprintf_s(path, MAX_PATH, _T("%s\\%s"), dirPath, findFileData.cFileName);
+        if (strcmp(findFileData.cFileName, _T(".")) != 0 && strcmp(findFileData.cFileName, _T("..")) != 0 && _tcscmp(dest, path) != 0) {
             DWORD attributes = GetFileAttributes(path);
             if (attributes & FILE_ATTRIBUTE_DIRECTORY)
                 cFolders++;
             else
                 cFiles++;
-            free(path);
         }
+        free(path);
     } while (FindNextFile(hFind, &findFileData) != 0);
 
     *countFiles = cFiles;
@@ -280,7 +294,7 @@ void GetCountFilesAndFolders(const LPTSTR dirPath, int* countFiles, int* countFo
     free(tmp);
 }
 
-void ListFilesAndFolders(const LPTSTR dirPath, LPTSTR* fPaths, const int cFiles, LPTSTR* dPaths, const int cDirs) {
+void ListFilesAndFolders(const LPTSTR dirPath, const LPTSTR dest, LPTSTR* fPaths, const int cFiles, LPTSTR* dPaths, const int cDirs) {
     LPTSTR tmp = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
     _stprintf_s(tmp, MAX_PATH, _T("%s\\*"), dirPath);
     WIN32_FIND_DATA findFileData;
@@ -300,19 +314,20 @@ void ListFilesAndFolders(const LPTSTR dirPath, LPTSTR* fPaths, const int cFiles,
     int iFiles = 0;
     int iDirs = 0;
     do {
-        if (strcmp(findFileData.cFileName, _T(".")) != 0 && strcmp(findFileData.cFileName, _T("..")) != 0) {
-            LPTSTR path = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
-            _stprintf_s(path, MAX_PATH, _T("%s\\%s"), dirPath, findFileData.cFileName);
+        LPTSTR path = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+        _stprintf_s(path, MAX_PATH, _T("%s\\%s"), dirPath, findFileData.cFileName);
+        if (strcmp(findFileData.cFileName, _T(".")) != 0 && strcmp(findFileData.cFileName, _T("..")) != 0 && _tcscmp(dest, path) != 0) {
             DWORD attributes = GetFileAttributes(path);
             if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
-                dPaths[iDirs] = path;
+                _stprintf_s(dPaths[iDirs], MAX_PATH, _T("%s"), path);
                 iDirs++;
             }
             else {
-                fPaths[iFiles] = path;
+                _stprintf_s(fPaths[iFiles], MAX_PATH, _T("%s"), path);
                 iFiles++;
             }
         }
+        free(path);
     } while (FindNextFile(hFind, &findFileData) != 0);
 
     free(tmp);

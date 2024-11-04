@@ -57,7 +57,7 @@
 #define MAX_COUNT_STRINGS 30
 #define ID_LB_ALL_FILES 501
 
-#define TIMER_TICK 1000
+#define TIMER_TICK 60000
 
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
@@ -161,7 +161,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         break;
     }
     case WM_DESTROY: {
-        free(binFilePath);
+        FreeMemoryBinFile();
         PostQuitMessage(0);
         break;
     }
@@ -189,13 +189,6 @@ void InitializeCompnents(HWND hwnd) {
 
         ShowWindow(cmpInfo[i].cmp, cmpInfo[i].initShow);
     }
-}
-
-void TakeBinFilePath() {
-    LPTSTR currentDir[MAX_PATH];
-    GetCurrentDirectory(MAX_PATH, currentDir);
-    binFilePath = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
-    _stprintf_s(binFilePath, MAX_PATH, _T("%s\\%s"), currentDir, _T(BIN_FILE_PATH));
 }
 
 void DrawDependsComponents() {
@@ -469,6 +462,7 @@ void OnClickButtonCreate(HWND hwnd) {
 
     LPTSTR fSource = (LPTSTR)malloc((lenS + 1) * sizeof(TCHAR));
     GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_SOURCE)].cmp, fSource, lenS + 1);
+    ChangePath(fSource);
     if (ErrorIncorrectFilePath(hwnd, fSource)) {
         free(fSource);
         return;
@@ -476,10 +470,11 @@ void OnClickButtonCreate(HWND hwnd) {
 
     LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
     GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST)].cmp, dDest, lenD + 1);
-    if (ErrorIncorrectDirPath(hwnd, dDest)) {
+    ChangePath(dDest);
+    if (ErrorIncorrectDirPath(hwnd, dDest, fSource)) {
         free(fSource); free(dDest);
         return;
-    }
+    };
 
     LPTSTR hour = (LPTSTR)malloc((lenH + 1) * sizeof(TCHAR));
     GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_HOUR)].cmp, hour, lenH + 1);
@@ -517,6 +512,14 @@ void OnClickButtonCreate(HWND hwnd) {
     ResetComponentsCaptionsToAdd();
     HideComponentsMainMenu(ID_BTN_ADD, ID_BTN_HIDE_ADD);
     free(fSource); free(dDest); free(hour); free(minutes);
+}
+
+void ChangePath(LPTSTR path) {
+    int len = _tcslen(path);
+    LPTSTR t[2];
+    _stprintf_s(t, 2*sizeof(TCHAR), _T("%c\0"), path[len - 1]);
+    if (strcmp(t, _T("\\")) == 0 || strcmp(t, _T("/")) == 0)
+        path[len - 1] = _T('\0');
 }
 
 void ChangeYOfComponent(int idCmp, int idDepCmp) {
@@ -607,7 +610,8 @@ void OnClickButtonChange(HWND hwnd, LPARAM lParam) {
 
     LPTSTR dDest = (LPTSTR)malloc((lenD + 1) * sizeof(TCHAR));
     GetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_DEST_CHANGE)].cmp, dDest, lenD + 1);
-    if (ErrorIncorrectDirPath(hwnd, dDest)) {
+    ChangePath(dDest);
+    if (ErrorIncorrectDirPath(hwnd, dDest, fSource)) {
         free(fSource); free(dDest);
         return;
     }
@@ -822,22 +826,10 @@ int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource) {
         free(data);
         return 1;
     }
-    /*else if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
-        LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
-        LPTSTR errorMessage = GetStringFromResource(TEXT_NOT_FILE);
-        LPTSTR lArr[] = { "\"", fSource, "\"", errorMessage };
-        LPTSTR data = ConcatenateStrings(lArr, 4);
-        MessageBox(hwnd, data, errorTitle, MB_OK | MB_ICONERROR);
-
-        free(errorTitle);
-        free(errorMessage);
-        free(data);
-        return 1;
-    }*/
     return 0;
 }
 
-int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest) {
+int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest, LPTSTR fSource) {
     DWORD attributes = GetFileAttributes(dDest);
     if (attributes == INVALID_FILE_ATTRIBUTES) {
         LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
@@ -861,6 +853,10 @@ int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest) {
         free(errorTitle);
         free(errorMessage);
         free(data);
+        return 1;
+    }
+    else if (_tcscmp(dDest, fSource) == 0) {
+        ErrorTextOnly(hwnd, TEXT_SIMILAR_PATHS);
         return 1;
     }
     return 0;

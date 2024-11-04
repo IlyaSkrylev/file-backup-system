@@ -42,6 +42,7 @@
 #define TEXT_LIMIT_FILES 3016
 #define TEXT_FILE_NOT_SELECTED 3017
 #define TEXT_DELETE 3018
+#define TEXT_SIMILAR_PATHS 3019
 
 // Next default values for new objects
 // 

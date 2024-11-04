@@ -1,8 +1,5 @@
 #include <windows.h>
 
-#define BIN_FILE_PATH "datafile.bin"
-LPTSTR binFilePath;
-
 struct dataAboutFile {
     TCHAR fSource[MAX_PATH];
     TCHAR dDest[MAX_PATH];
@@ -10,6 +7,8 @@ struct dataAboutFile {
     DWORD lastCopy;
 };
 
+void TakeBinFilePath();
+void FreeMemoryBinFile();
 void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
 int RecreateBinFile(struct dataAboutFile* data, int count);
@@ -27,8 +26,8 @@ void DivideFileName(const TCHAR* fileName, TCHAR* fName, TCHAR* fType);
 TCHAR* ConvertIntToTCHAR(int n);
 void CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime);
 void CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime);
-void GetCountFilesAndFolders(const LPTSTR dirPath, int* countFiles, int* countFolders);
-void ListFilesAndFolders(const LPTSTR dirPath, LPTSTR* fPaths, const int cFiles, LPTSTR* dPaths, const int cDirs);
+void GetCountFilesAndFolders(const LPTSTR dirPath, const LPTSTR dest, int* countFiles, int* countFolders);
+void ListFilesAndFolders(const LPTSTR dirPath, const LPTSTR dest, LPTSTR* fPaths, const int cFiles, LPTSTR* dPaths, const int cDirs);
 TCHAR* CreatePathToFile(const TCHAR* dest, const TCHAR* file);
 TCHAR* CreatePathToFolder(const TCHAR* dest, const TCHAR* folder);
 TCHAR* NewFolderPath(const TCHAR* dest, const TCHAR* pathToFolder);

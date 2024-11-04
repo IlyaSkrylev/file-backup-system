@@ -15,7 +15,6 @@ int RunWindow(HINSTANCE hInstance, int nCmdShow);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void InitializeCompnents(HWND hwnd);
-void TakeBinFilePath();
 void DrawDependsComponents();
 void SetMinMaxSize(LPARAM lParam);
 void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam);
@@ -53,10 +52,11 @@ char* SelectFolder(HWND hwnd);
 LPTSTR ConcatenateStrings(LPTSTR strings[], int len);
 int GetEnteredNumber(LPTSTR number);
 LPTSTR ConvertIntToLPTSTR(int n);
+void ChangePath(LPTSTR path);
 
 void ErrorTextOnly(HWND hwnd, DWORD textInd);
 int ErrorIncorrectFilePath(HWND hwnd, LPTSTR fSource);
-int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest);
+int ErrorIncorrectDirPath(HWND hwnd, LPTSTR dDest, LPTSTR fSource);
 int ErrorIncorrectFrequency(HWND hwnd, int freq);
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq);
 void InformationSuccessDeleting(HWND hwnd, LPTSTR fSource);
