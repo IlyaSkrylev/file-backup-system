@@ -26,6 +26,7 @@ HWND CreateNumericEdit(HWND hwnd, struct component nedit);
 HWND CreateLabel(HWND hwnd, struct component lbl);
 HWND CreateUpDown(HWND hwnd, struct component tmr);
 HWND CreateListBox(HWND hwnd, struct component tb);
+HWND CreateGrid(HWND hwnd, struct component gr);
 
 LPTSTR GetStringFromResource(UINT id);
 void SetApplicationLanguage(BOOL isEnglish);

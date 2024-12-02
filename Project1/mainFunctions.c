@@ -3,11 +3,11 @@
 #include "mainFunctions.h"
 
 #define BIN_FILE_PATH "datafile.bin"
-#define SAVE_FILE_PATH "BackupFiles";
+#define LOG_FILE_PATH "logfile.bin"
 #define MAX_RECORDS 100
-#define BIN_FILE_PATH "datafile.bin"
 
 LPTSTR binFilePath;
+LPTSTR logFilePath;
 
 void TakeBinFilePath() {
     LPTSTR currentDir[MAX_PATH];
@@ -168,6 +168,70 @@ int RecordCountInBinFile() {
     return recordCount;
 }
 
+void TakeLogFile() {
+    LPTSTR currentDir[MAX_PATH];
+    GetCurrentDirectory(MAX_PATH, currentDir);
+    logFilePath = (LPTSTR)malloc(MAX_PATH * sizeof(TCHAR));
+    _stprintf_s(logFilePath, MAX_PATH, _T("%s\\%s"), currentDir, _T(LOG_FILE_PATH));
+}
+
+void FreeMemoryLogFile() {
+    free(logFilePath);
+}
+
+void AddRecordToLogFile(const TCHAR* filePath, const TCHAR* destPath) {
+    HANDLE hFile = CreateFile(logFilePath, GENERIC_WRITE,
+        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE)
+        return -1;
+
+    struct logsInfo data;
+    _tcscpy_s(data.fSource, MAX_PATH, filePath);
+    _tcscpy_s(data.fDest, MAX_PATH, destPath);
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    LPTSTR time = malloc(sizeof(TCHAR) * 50);
+
+    _stprintf_s(time, 50, _T("%d-%d-%d   %d:%d"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute);
+    _tcscpy_s(data.copyTime, MAX_PATH, time);
+    SetFilePointer(hFile, 0, NULL, FILE_END);
+    DWORD bytesWritten;
+    if (!WriteFile(hFile, &data, sizeof(struct logsInfo), &bytesWritten, NULL)) {
+        free(time);
+        return -1;
+    }
+
+    free(time);
+    CloseHandle(hFile);
+    return 0;
+}
+
+struct logsInfo* GetDataFromLogFile(int* recordCount) {
+    struct logsInfo* data = (struct logsInfo*)malloc(sizeof(struct logsInfo) * MAX_RECORDS);
+    HANDLE hFile = CreateFile(logFilePath, GENERIC_READ,
+        0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return NULL;
+    }
+
+    DWORD bytesRead;
+    BOOL result = ReadFile(hFile, data,
+        sizeof(struct logsInfo) * MAX_RECORDS, &bytesRead, NULL);
+
+    if (!result || bytesRead % sizeof(struct logsInfo) != 0) {
+        CloseHandle(hFile);
+        free(data);
+        return NULL;
+    }
+
+    *recordCount = bytesRead / sizeof(struct logsInfo);
+    CloseHandle(hFile);
+    return data;
+}
+
 DWORD GetNowTime() {
     SYSTEMTIME lst = { 2024, 1, 0, 1, 0, 0, 0, 0 };
     SYSTEMTIME st;
@@ -222,15 +286,20 @@ struct dataAboutFile* GetFilesToCopy(int* count) {
 void CopyFiles(const struct dataAboutFile* data, int count) {
     for (int i = 0; i < count; i++) {
         DWORD attributes = GetFileAttributes(data[i].fSource);
-        if (attributes & FILE_ATTRIBUTE_DIRECTORY)
-            CopyDirectory(&data[i].dDest, &data[i].fSource, TRUE);
+        if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+            TCHAR* destPath= CopyDirectory(&data[i].dDest, &data[i].fSource, TRUE);
+            AddRecordToLogFile(&data[i].fSource, destPath);
+            free(destPath);
+        }
         else {
-            CopyingFile(&data[i].dDest, &data[i].fSource, TRUE);
+            TCHAR* destPath = CopyingFile(&data[i].dDest, &data[i].fSource, TRUE);
+            AddRecordToLogFile(&data[i].fSource, destPath);
+            free(destPath);;
         }
     }
 }
 
-void CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime) {
+TCHAR* CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime) {
     TCHAR fDestFile[MAX_PATH];
     TCHAR* path = CreatePathToFile(dest, source);
     if (!isNeedToSetTime) {
@@ -239,10 +308,10 @@ void CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime) {
     }
     _stprintf_s(fDestFile, MAX_PATH, _T("%s"), path);
     CopyFile(source, fDestFile, FALSE);
-    free(path);
+    return path;
 }
 
-void CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime) {
+TCHAR* CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime) {
     TCHAR* path = CreatePathToFolder(dest, dirPath);
     if (!isNeedToSetTime) {
         free(path);
@@ -264,7 +333,7 @@ void CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime
     for (int i = 0; i < cDirs; i++) {
         CopyDirectory(path, dPaths[i], FALSE);
     }
-    free(path);
+    return path;
 }
 
 void GetCountFilesAndFolders(const LPTSTR dirPath, const LPTSTR dest, int* countFiles, int* countFolders) {
@@ -354,6 +423,10 @@ void DivideFileName(const TCHAR* fileName, TCHAR* fName, TCHAR* fType) {
 
         _tcscpy_s(fType, MAX_PATH, dot + 1);
     }
+    else {
+        _stprintf_s(fName, MAX_PATH, _T("%s"), fileName);
+        _stprintf_s(fType, MAX_PATH, _T("%s"), _T(""));
+    }
 }
 
 TCHAR* ConvertIntToTCHAR(int n) {
@@ -426,12 +499,31 @@ TCHAR* NewFilePath(const TCHAR* dest, const TCHAR* pathToFile) {
     return fDestFile;
 }
 
-/*BOOL CTRLHandler(DWORD CtrlType, LPTSTR unsavedFiles) {
-    if (CtrlType == CTRL_CLOSE_EVENT || CtrlType == CTRL_LOGOFF_EVENT || CtrlType == CTRL_SHUTDOWN_EVENT) {
-        TCHAR saveFilePath = _T(SAVE_FILE_PATH);
-        CreateDirectory(&saveFilePath, NULL);
-                          
+BOOL SetPrivilege(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivilege) {
+    TOKEN_PRIVILEGES tp;
+    LUID luid;
+
+    if (!LookupPrivilegeValue(NULL, lpszPrivilege, &luid)) {
+        return FALSE;
     }
 
-    return TRUE;
-}*/
+    tp.PrivilegeCount = 1;
+    tp.Privileges[0].Luid = luid;
+    tp.Privileges[0].Attributes = (bEnablePrivilege) ? SE_PRIVILEGE_ENABLED : 0;
+
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), (PTOKEN_PRIVILEGES)NULL, (PDWORD)NULL)) {
+        return FALSE;
+    }
+
+    return (GetLastError() == ERROR_SUCCESS);
+}
+
+
+void EnableBackupRestorePrivileges() {
+    HANDLE hToken;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken)) {
+        SetPrivilege(hToken, SE_BACKUP_NAME, TRUE);
+        SetPrivilege(hToken, SE_RESTORE_NAME, TRUE);
+        CloseHandle(hToken);
+    }
+}

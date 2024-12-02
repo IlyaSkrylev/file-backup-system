@@ -26,6 +26,9 @@
 #define ID_BTN_SELECT_DIR_CHANGE 109
 #define ID_BTN_DELETE_ALL_FILES 1010
 #define ID_BTN_CHANGE_ALL_FILES 1011
+#define ID_BTN_LOGS 1012
+#define ID_BTN_HIDE_LOGS 1013
+#define ID_BTN_RECOVER 1014
 
 #define EDIT_WIDTH 400
 #define EDIT_HEIGHT 20
@@ -53,11 +56,12 @@
 #define ID_UPDOWN_MINUTE_CHANGE 404
 
 #define LISTBOX_WIDTH 670 
-#define LISTBOX_HEIGHT(countStrings) 18*countStrings
+#define LISTBOX_HEIGHT(countStrings) 17*countStrings
 #define MAX_COUNT_STRINGS 30
 #define ID_LB_ALL_FILES 501
+#define ID_LB_LOGS 502
 
-#define TIMER_TICK 60000
+#define TIMER_TICK 1000
 
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
@@ -93,6 +97,11 @@ struct component cmpInfo[] = {
     {NULL, "button", BUTTON_SELECT_DIR_CHANGE, ID_BTN_SELECT_DIR_CHANGE, 690, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
     {NULL, "button", BUTTON_HIDE_ALL_FILES, ID_BTN_HIDE_ALL_FILES, 120, 100, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
 
+    {NULL, "button", BUTTON_LOGS, ID_BTN_LOGS, 10, 80, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
+    {NULL, "listbox", 0, ID_LB_LOGS, 120, 10, LISTBOX_WIDTH - BUTTON_WIDTH - 10, LISTBOX_HEIGHT(5), SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_RECOVER, ID_BTN_RECOVER, 690, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+    {NULL, "button", BUTTON_HIDE_LOGS, ID_BTN_HIDE_LOGS, 690, 45, BUTTON_WIDTH, BUTTON_HEIGHT, SW_HIDE, FALSE},
+
     {NULL, "button", BUTTON_LANG, ID_BTN_LANG, 0, 0, 40, BUTTON_HEIGHT, SW_SHOW, TRUE},
 
     {NULL, NULL, NULL, NULL, NULL, NULL}
@@ -123,7 +132,6 @@ int RunWindow(HINSTANCE hInstance, int nCmdShow) {
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
-    //SetConsoleCtrlHandler((PHANDLER_ROUTINE)CTRLHandler, TRUE);
     UINT_PTR timerID = SetTimer(NULL, 0, TIMER_TICK, TimerProc);
     while (GetMessage(&msg, NULL, 0, 0))
     {
@@ -141,6 +149,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_CREATE: {
         InitializeCompnents(hwnd);
         TakeBinFilePath();
+        TakeLogFile();
         break;
     }
     case WM_SIZE: {
@@ -162,6 +171,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
     case WM_DESTROY: {
         FreeMemoryBinFile();
+        FreeMemoryLogFile();
         PostQuitMessage(0);
         break;
     }
@@ -309,9 +319,9 @@ HWND CreateUpDown(HWND hwnd, struct component tmr) {
 }
 
 HWND CreateListBox(HWND hwnd, struct component lb) {
-    HWND comboBox = CreateWindow(TEXT("LISTBOX"), "", WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_BORDER,
+    HWND comboBox = CreateWindow(TEXT("LISTBOX"), "", WS_CHILD | WS_VISIBLE | LBS_NOTIFY | WS_BORDER | WS_VSCROLL,
         lb.x, lb.y, lb.width, lb.height,
-        hwnd, (HMENU)ID_LB_ALL_FILES, NULL, NULL);
+        hwnd, (HMENU)lb.id, NULL, NULL);
     return comboBox;
 }
 
@@ -368,6 +378,15 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     }
     case ID_BTN_DELETE_ALL_FILES: {
         OnClickDeleteAllFiles(hwnd, lParam);
+        break;
+    }
+    case ID_BTN_LOGS: {
+        ShowFilesFromLogFile(hwnd);
+        ShowAuxiliaryComponents(ID_BTN_LOGS, ID_BTN_HIDE_LOGS);
+        break;
+    }
+    case ID_BTN_HIDE_LOGS: {
+        HideComponentsMainMenu(ID_BTN_LOGS, ID_BTN_HIDE_LOGS);
         break;
     }
     }
@@ -728,6 +747,29 @@ void ShowInfoAboutFile(LPARAM lParam) {
     SetWindowText(cmpInfo[GetIndexOfComponent(ID_EDIT_MINUTE_CHANGE)].cmp, lm);
 
     free(lh); free(lm); free(data);
+}
+
+int ShowFilesFromLogFile(hwnd) {
+    int recordCount = 0;
+    struct logsInfo* data = GetDataFromLogFile(&recordCount);
+    int listId = GetIndexOfComponent(ID_LB_LOGS);
+
+    int maxCount = 30;
+    if (recordCount < maxCount) maxCount = recordCount;
+    MoveWindow(cmpInfo[listId].cmp, cmpInfo[listId].x, cmpInfo[listId].y, cmpInfo[listId].width, LISTBOX_HEIGHT(maxCount), TRUE);
+    cmpInfo[listId].height = LISTBOX_HEIGHT(maxCount);
+
+    SendMessage(cmpInfo[listId].cmp, LB_RESETCONTENT, 0, 0);
+
+    for (int i = 0; i < recordCount; i++) {
+        LPTSTR msg = (LPTSTR)malloc(3 * MAX_PATH * sizeof(TCHAR));
+        _stprintf_s(msg, 2 * MAX_PATH, _T("%s     %s"), data[i].copyTime, data[i].fSource);
+        SendMessage(cmpInfo[listId].cmp, LB_ADDSTRING, 0, (LPARAM)msg);
+        free(msg);
+    }
+
+    free(data);
+    return 0;
 }
 
 int GetIndexOfComponent(int id) {
