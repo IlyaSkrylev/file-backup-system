@@ -43,5 +43,4 @@ TCHAR* CreatePathToFile(const TCHAR* dest, const TCHAR* file);
 TCHAR* CreatePathToFolder(const TCHAR* dest, const TCHAR* folder);
 TCHAR* NewFolderPath(const TCHAR* dest, const TCHAR* pathToFolder);
 TCHAR* NewFilePath(const TCHAR* dest, const TCHAR* pathToFile);
-BOOL SetPrivilege(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivilege);
-void EnableBackupRestorePrivileges();
+LPTSTR RemoveLastPathElement(LPTSTR path);

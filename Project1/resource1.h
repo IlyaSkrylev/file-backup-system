@@ -47,6 +47,8 @@
 #define TEXT_DELETE 3018
 #define TEXT_SIMILAR_PATHS 3019
 #define TEXT_FILE_SOURCE 3020
+#define TEXT_FAILED_RECOVERY 3021
+#define TEXT_SUCCESSFULLY_RECOVERY 3022
 
 // Next default values for new objects
 // 

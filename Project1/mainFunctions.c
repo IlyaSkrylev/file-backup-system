@@ -4,7 +4,7 @@
 
 #define BIN_FILE_PATH "datafile.bin"
 #define LOG_FILE_PATH "logfile.bin"
-#define MAX_RECORDS 100
+#define MAX_RECORDS 500
 
 LPTSTR binFilePath;
 LPTSTR logFilePath;
@@ -194,7 +194,7 @@ void AddRecordToLogFile(const TCHAR* filePath, const TCHAR* destPath) {
     GetLocalTime(&st);
     LPTSTR time = malloc(sizeof(TCHAR) * 50);
 
-    _stprintf_s(time, 50, _T("%d-%d-%d   %d:%d"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute);
+    _stprintf_s(time, 50, _T("%d-%02d-%02d   %02d:%02d"), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute);
     _tcscpy_s(data.copyTime, MAX_PATH, time);
     SetFilePointer(hFile, 0, NULL, FILE_END);
     DWORD bytesWritten;
@@ -284,22 +284,43 @@ struct dataAboutFile* GetFilesToCopy(int* count) {
 }
 
 void CopyFiles(const struct dataAboutFile* data, int count) {
+    int deletedFilesCount = 0;
     for (int i = 0; i < count; i++) {
         DWORD attributes = GetFileAttributes(data[i].fSource);
         if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
             TCHAR* destPath= CopyDirectory(&data[i].dDest, &data[i].fSource, TRUE);
-            AddRecordToLogFile(&data[i].fSource, destPath);
+            if (destPath != NULL)
+                AddRecordToLogFile(&data[i].fSource, destPath);
+            else {
+                DeleteRecordFromBinFile(i - deletedFilesCount);
+                deletedFilesCount++;
+            }
             free(destPath);
         }
         else {
             TCHAR* destPath = CopyingFile(&data[i].dDest, &data[i].fSource, TRUE);
-            AddRecordToLogFile(&data[i].fSource, destPath);
+            if (destPath != NULL) 
+                AddRecordToLogFile(&data[i].fSource, destPath);
+            else {
+                DeleteRecordFromBinFile(i - deletedFilesCount);
+                deletedFilesCount++;
+            }
             free(destPath);;
         }
     }
 }
 
 TCHAR* CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime) {
+    DWORD attributes = GetFileAttributes(source);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        return NULL;
+    }
+
+    attributes = GetFileAttributes(dest);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        return NULL;
+    }
+
     TCHAR fDestFile[MAX_PATH];
     TCHAR* path = CreatePathToFile(dest, source);
     if (!isNeedToSetTime) {
@@ -312,6 +333,16 @@ TCHAR* CopyingFile(const TCHAR* dest, const TCHAR* source, BOOL isNeedToSetTime)
 }
 
 TCHAR* CopyDirectory(const LPTSTR dest, const LPTSTR dirPath, BOOL isNeedToSetTime) {
+    DWORD attributes = GetFileAttributes(dirPath);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        return NULL;
+    }
+
+    attributes = GetFileAttributes(dest);
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        return NULL;
+    }
+
     TCHAR* path = CreatePathToFolder(dest, dirPath);
     if (!isNeedToSetTime) {
         free(path);
@@ -499,31 +530,25 @@ TCHAR* NewFilePath(const TCHAR* dest, const TCHAR* pathToFile) {
     return fDestFile;
 }
 
-BOOL SetPrivilege(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivilege) {
-    TOKEN_PRIVILEGES tp;
-    LUID luid;
+TCHAR* RemoveLastPathElement(LPTSTR path) {
+    TCHAR* newPath = NULL;
+    int len = lstrlen(path);
 
-    if (!LookupPrivilegeValue(NULL, lpszPrivilege, &luid)) {
-        return FALSE;
+    LPTSTR lastSlash = NULL;
+    for (int i = len - 1; i >= 0; i--) {
+        if (path[i] == '\\') {
+            lastSlash = &path[i];
+            break;
+        }
     }
 
-    tp.PrivilegeCount = 1;
-    tp.Privileges[0].Luid = luid;
-    tp.Privileges[0].Attributes = (bEnablePrivilege) ? SE_PRIVILEGE_ENABLED : 0;
-
-    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), (PTOKEN_PRIVILEGES)NULL, (PDWORD)NULL)) {
-        return FALSE;
+    if (lastSlash == NULL) {
+        newPath = (TCHAR*)malloc(3 * sizeof(TCHAR));
+        lstrcpy(newPath, _T(":\\"));
     }
-
-    return (GetLastError() == ERROR_SUCCESS);
-}
-
-
-void EnableBackupRestorePrivileges() {
-    HANDLE hToken;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &hToken)) {
-        SetPrivilege(hToken, SE_BACKUP_NAME, TRUE);
-        SetPrivilege(hToken, SE_RESTORE_NAME, TRUE);
-        CloseHandle(hToken);
+    else {
+        newPath = (TCHAR*)malloc(MAX_PATH * sizeof(TCHAR));
+        lstrcpyn(newPath, path, lastSlash - path + 1);
     }
+    return newPath;
 }

@@ -61,7 +61,7 @@
 #define ID_LB_ALL_FILES 501
 #define ID_LB_LOGS 502
 
-#define TIMER_TICK 1000
+#define TIMER_TICK 1000 * 60
 
 struct component cmpInfo[] = {
     {NULL, "button", BUTTON_ADD, ID_BTN_ADD, 10, 10, BUTTON_WIDTH, BUTTON_HEIGHT, SW_SHOW, TRUE},
@@ -387,6 +387,15 @@ void CommandsOfComponents(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     }
     case ID_BTN_HIDE_LOGS: {
         HideComponentsMainMenu(ID_BTN_LOGS, ID_BTN_HIDE_LOGS);
+        break;
+    }
+    case ID_BTN_RECOVER: {
+        if (OnClickButtonRecover(hwnd)) {
+            SuccessfullyRecoveringFile(hwnd);
+        }
+        else {
+            ErrorTextOnly(hwnd, TEXT_FAILED_RECOVERY);
+        }
         break;
     }
     }
@@ -716,6 +725,47 @@ void OnClickDeleteAllFiles(HWND hwnd, LPARAM lParam) {
     free(fSource);
 }
 
+BOOL OnClickButtonRecover(HWND hwnd) {
+    int selectedIndex = SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_LOGS)].cmp, LB_GETCURSEL, 0, 0);
+    if (selectedIndex == LB_ERR) {
+        ErrorTextOnly(hwnd, TEXT_FILE_NOT_SELECTED);
+        return FALSE;
+    }
+
+    BOOL isSelected = FALSE;
+    int count = SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_LOGS)].cmp, LB_GETCOUNT, 0, 0);
+    for (int i = 0; i < count; i++)
+        if (SendMessage(cmpInfo[GetIndexOfComponent(ID_LB_LOGS)].cmp, LB_GETSEL, i, 0))
+            isSelected = TRUE;
+
+    selectedIndex = count - selectedIndex - 1;
+
+    if (!isSelected) {
+        ErrorTextOnly(hwnd, TEXT_FILE_NOT_SELECTED);
+        return FALSE;
+    }
+
+    int recordsCount = 0;
+    struct logsInfo* data = GetDataFromLogFile(&recordsCount);
+    if (recordsCount > 0) {
+        DWORD attributes = GetFileAttributes(data[selectedIndex].fDest);
+        if (attributes & FILE_ATTRIBUTE_DIRECTORY) {
+            TCHAR* fSourceFolder = RemoveLastPathElement(&data[selectedIndex].fSource);
+            TCHAR* destPath = CopyDirectory(fSourceFolder, &data[selectedIndex].fDest, FALSE);
+            free(destPath); 
+            free(fSourceFolder);
+        }
+        else {
+            TCHAR* fSourceFolder = RemoveLastPathElement(&data[selectedIndex].fSource);
+            TCHAR* destPath = CopyingFile(fSourceFolder, &data[selectedIndex].fDest, FALSE);
+            free(destPath); 
+            free(fSourceFolder);
+        }
+    }
+    free(data);
+    return TRUE;
+}
+
 int ShowFilesFromBinFile(hwnd) {
     int recordCount = 0;
     struct dataAboutFile* data = GetDataFromBinFile(&recordCount);
@@ -761,7 +811,7 @@ int ShowFilesFromLogFile(hwnd) {
 
     SendMessage(cmpInfo[listId].cmp, LB_RESETCONTENT, 0, 0);
 
-    for (int i = 0; i < recordCount; i++) {
+    for (int i = recordCount - 1; i >= 0; i--) {
         LPTSTR msg = (LPTSTR)malloc(3 * MAX_PATH * sizeof(TCHAR));
         _stprintf_s(msg, 2 * MAX_PATH, _T("%s     %s"), data[i].copyTime, data[i].fSource);
         SendMessage(cmpInfo[listId].cmp, LB_ADDSTRING, 0, (LPARAM)msg);
@@ -773,10 +823,10 @@ int ShowFilesFromLogFile(hwnd) {
 }
 
 int GetIndexOfComponent(int id) {
-    for (int i = 0; cmpInfo[i].id != NULL; i++) {
+    for (int i = 0; cmpInfo[i].id != NULL; i++)
         if (cmpInfo[i].id == id)
             return i;
-    }
+
     return 0;
 }
 
@@ -831,16 +881,14 @@ char* SelectFolder(HWND hwnd) {
 
 LPTSTR ConcatenateStrings(LPTSTR strings[], int len) {
     int totalLen = 0;
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < len; i++)
         totalLen += lstrlen(strings[i]);
-    }
 
     LPTSTR lpszResult = (LPTSTR)malloc((totalLen + 1) * sizeof(TCHAR));
     lstrcpy(lpszResult, strings[0]);
 
-    for (int i = 1; i < len; i++) {
+    for (int i = 1; i < len; i++)
         lstrcat(lpszResult, strings[i]);
-    }
 
     return lpszResult;
 }
@@ -918,6 +966,15 @@ int ErrorIncorrectFrequency(HWND hwnd, int freq) {
         return 1;
     }
     return 0;
+}
+
+void SuccessfullyRecoveringFile(HWND hwnd) {
+    LPTSTR errorTitle = GetStringFromResource(TEXT_ERROR);
+    LPTSTR errorMessage = GetStringFromResource(TEXT_SUCCESSFULLY_RECOVERY);
+    MessageBox(hwnd, errorMessage, errorTitle, MB_OK);
+
+    free(errorTitle);
+    free(errorMessage);
 }
 
 void InformationSuccessCreating(HWND hwnd, LPTSTR fSource, LPTSTR dDest, int minFreq) {
