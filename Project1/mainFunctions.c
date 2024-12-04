@@ -47,6 +47,7 @@ int ChangeRecordInBinFile(const struct dataAboutFile* record, int numberOfRecord
     SetFilePointer(hFile, 0, NULL, FILE_END);
     DWORD bytesWritten;
     if (!WriteFile(hFile, data, sizeof(struct dataAboutFile) * recordCount, &bytesWritten, NULL)) {
+        CloseHandle(hFile);
         return -1;
     }
     CloseHandle(hFile);
@@ -65,6 +66,7 @@ int RecreateBinFile(struct dataAboutFile* data, int count) {
     SetFilePointer(hFile, 0, NULL, FILE_END);
     DWORD bytesWritten;
     if (!WriteFile(hFile, data, sizeof(struct dataAboutFile) * count, &bytesWritten, NULL)) {
+        CloseHandle(hFile);
         return -1;
     }
     CloseHandle(hFile);
@@ -112,8 +114,10 @@ int WriteDataIntoBinFile(const struct dataAboutFile* data) {
 
     SetFilePointer(hFile, 0, NULL, FILE_END);
     DWORD bytesWritten;
-    if (!WriteFile(hFile, data, sizeof(struct dataAboutFile), &bytesWritten, NULL))
+    if (!WriteFile(hFile, data, sizeof(struct dataAboutFile), &bytesWritten, NULL)) {
+        CloseHandle(hFile);
         return -1;
+    }
 
     CloseHandle(hFile);
     return 0;
